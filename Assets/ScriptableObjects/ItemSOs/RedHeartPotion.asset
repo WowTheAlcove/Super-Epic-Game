@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 74e41ea337f344a47b142ab3ccb0650e, type: 3}
+  m_Name: RedHeartPotion
+  m_EditorClassIdentifier: 
+  itemID: 1
+  itemName: Red Heart Potion
+  description: Revitalizes your spirit!
+  itemType: 2
+  icon: {fileID: 803430426, guid: eb00b2b2a26da8e4bb1db5385ac2cf71, type: 3}
+  worldItemPrefab: {fileID: 864501101993628037, guid: f9882f55c2f27d843b30619fc68d0ff7, type: 3}
+  inventoryItemPrefab: {fileID: 6971925615121116100, guid: 8abef9a60e28a5e4996ae6e43fd48e69, type: 3}
+  behaviourItemPrefab: {fileID: 7326254657645238637, guid: 717fc7ec4cb2640469e76af512f798a8, type: 3}

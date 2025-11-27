@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fa62e8f6490219d43b484b396620d72f, type: 3}
+  m_Name: PrefabDatabase
+  m_EditorClassIdentifier: 
+  entries:
+  - prefabID: KickablePotPrefab
+    prefab: {fileID: 5803398154544284786, guid: 7ed12bb0c5ecd2d449d524b83fb66aec, type: 3}
+  - prefabID: GreenPotionWIPrefab
+    prefab: {fileID: 1799419534299111199, guid: 9d2275b2a8f663e4a899cd9f089dc7fa, type: 3}
+  - prefabID: RedHeartPotionWIPrefab
+    prefab: {fileID: 864501101993628037, guid: f9882f55c2f27d843b30619fc68d0ff7, type: 3}
+  - prefabID: ChestPrefab
+    prefab: {fileID: 4768705356601186686, guid: 6defabaa5809141459cd177fb5fb8245, type: 3}
+  - prefabID: Drink3PotionsQuestStepPrefab
+    prefab: {fileID: 282999269977856424, guid: daa46c1d0af46d042b5dbff2cbd47607, type: 3}
+  - prefabID: SharedDrink3PotionsQuestStepPrefab
+    prefab: {fileID: 3493244691854661980, guid: 792827b2ca4ce114fa2d31ec54e9a469, type: 3}

@@ -1,0 +1,35 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
+  m_Name: Default Local Group
+  m_EditorClassIdentifier: Unity.Addressables.Editor::UnityEditor.AddressableAssets.Settings.AddressableAssetGroup
+  m_GroupName: Default Local Group
+  m_GUID: ae75724b384a0394f94b509fd05d4609
+  m_SerializeEntries:
+  - m_GUID: 084e26931b9d07b45ab39a53aba20b57
+    m_Address: Assets/Prefabs
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - GamePrefabLabel
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d4db1b5f925632f41ba19902600f91f6
+    m_Address: Assets/ScriptableObjects/QuestInfoSOs
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - QuestInfoSOLabel
+    FlaggedDuringContentUpdateRestriction: 0
+  m_ReadOnly: 0
+  m_Settings: {fileID: 11400000, guid: 4f802fb21495fb44abc15e06e0c33cba, type: 2}
+  m_SchemaSet:
+    m_Schemas:
+    - {fileID: 11400000, guid: 05647d73e9089b747b2ded78d124e109, type: 2}
+    - {fileID: 11400000, guid: 8d8be96db2260874592a8593bcfef636, type: 2}
