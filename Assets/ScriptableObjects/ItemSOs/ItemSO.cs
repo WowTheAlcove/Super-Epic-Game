@@ -11,7 +11,7 @@ public enum ItemType {
     Miscellaneous
 }
 
-[CreateAssetMenu(fileName = "NewInventoryItemSO", menuName = "Scriptable Objects/InventoryItemSO", order = 1)]
+[CreateAssetMenu(fileName = "NewInventoryItemSO", menuName = "Scriptable Objects/ItemSO", order = 1)]
 public class ItemSO : ScriptableObject
 {
     public int itemID;
