@@ -9,6 +9,12 @@ public class DynamicPrefabStorer : MonoBehaviour
 {
     [SerializeField] private string prefabID;
     private SaveID saveIDClassToOverwrite;
+
+    private void OnValidate() {
+        if (!Application.isPlaying) {
+            prefabID = gameObject.name + "Prefab";
+        }
+    }
     void Awake()
     {
         GenerateGuid();

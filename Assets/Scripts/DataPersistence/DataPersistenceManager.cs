@@ -27,7 +27,7 @@ public class DataPersistenceManager : NetworkBehaviour {
     private SimulationMode2D originalPhysics2DMode;
 
 
-    private GameData mostRecentlyUpdatedGameData;
+    private GameData mostRecentlyUpdatedGameData; //this needs to be stored outside of methods so that players can join and get their data loaded
     private FileDataHandler dataHandler;
 
     private List<IDataPersistence> dataPersistenceObjects;
@@ -213,7 +213,6 @@ public class DataPersistenceManager : NetworkBehaviour {
 
         mostRecentlyUpdatedGameData = new GameData();
 
-        this.dataPersistenceObjects = FindAllDataPersistenceObjects();
 
         //find all dynamic prefab storers and save their prefabID and GUID
         this.dynamicPrefabStorers = FindAllDynamicPrefabStorers();
@@ -222,6 +221,7 @@ public class DataPersistenceManager : NetworkBehaviour {
         }
 
         //take data from all scripts using IDataPersistent and save it
+        this.dataPersistenceObjects = FindAllDataPersistenceObjects();
         foreach (IDataPersistence persistentObject in dataPersistenceObjects) {
             persistentObject.SaveData(ref mostRecentlyUpdatedGameData);
         }
@@ -344,16 +344,19 @@ public class DataPersistenceManager : NetworkBehaviour {
             GameObject prefabToReinstantiate = dynamicPrefabDatabase.GetPrefabFromID(prefabAndID.Value);
 
             if (prefabToReinstantiate == null) {
+                //if it can't find the prefab associated with the prefab ID
                 Debug.LogError("Could not find id: " + prefabAndID.Value + " in prefabDatabase");
                 continue;
             }
             DynamicPrefabStorer reinstantiatedObject = Instantiate(prefabToReinstantiate).GetComponent<DynamicPrefabStorer>();
             if (reinstantiatedObject == null) {
+                //if it can't find the dynamic prefab storer on the instantiated dynamic prefab
                 Debug.LogError($"The id: {prefabAndID.Value} instantiated an object with no DynamicPrefabStorer");
                 continue;
             }
             reinstantiatedObject.TryGetComponent<NetworkObject>(out NetworkObject reinstantiatedObjectNORef);
             if (reinstantiatedObjectNORef == null) {
+                //if the dynamic prefab does not have a NO component
                 Debug.LogError($"The id: {prefabAndID.Value} instantiated an object with no NetworkObject component");
                 continue;
             }

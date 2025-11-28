@@ -31,8 +31,7 @@ public class PrefabDatabase : ScriptableObject {
         var prefabs = Addressables.LoadAssetsAsync<GameObject>("GamePrefabLabel").WaitForCompletion();
 
         foreach (var prefab in prefabs) {
-            // You need a way to get a unique ID for each prefab.
-            // Here I'm using prefab.name, but you could use a component or a ScriptableObject if you want custom IDs.
+            // set an id that is just the prefab name + "Prefab"
             if(prefabDict.ContainsKey(prefab.name + "Prefab")) {
                 Debug.LogError($"Duplicate prefab name detected: {prefab.name} when instantiating prefab dictionary.");
                 continue;
