@@ -8,10 +8,13 @@ public class DialogueEvents
         public string KnotName;
     }
     
-    public event EventHandler OnEnterDialogue;
+    public event EventHandler<DialogueEventArgs> OnEnterDialogue;
     public void InvokeOnEnterDialogue(object sender, string knotName)
     {
-        OnEnterDialogue?.Invoke(sender, EventArgs.Empfty);
+        OnEnterDialogue?.Invoke(sender, new DialogueEventArgs()
+        {
+            KnotName = knotName
+        });
     }
 
 }

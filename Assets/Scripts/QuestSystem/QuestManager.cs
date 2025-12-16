@@ -100,7 +100,7 @@ public class QuestManager : NetworkBehaviour, IDataPersistence
     }
 
     //If the quest is shared, then change the quest state on all clients
-    //If not, then only on the 
+    //If not, then only on the given player index
     private void ChangeQuestStateOnAppropriateClients(int playerIndex, string questToChangeId, QuestState newState) {
         Quest quest = GetQuestByID(questToChangeId, playerIndex);
         if(quest.info.IsShared) {

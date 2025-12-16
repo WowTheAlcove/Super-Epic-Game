@@ -2671,7 +2671,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0.00015944387}
+  m_AnchoredPosition: {x: 0, y: 0.00010953833}
   m_SizeDelta: {x: 0, y: 300}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &423613899
@@ -3229,7 +3229,7 @@ Transform:
   m_GameObject: {fileID: 519420028}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -3.2711048, y: -4.189752, z: -10}
+  m_LocalPosition: {x: -0.84509087, y: -4.189752, z: -10}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -26055,6 +26055,51 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 9d2275b2a8f663e4a899cd9f089dc7fa, type: 3}
+--- !u!1 &1451875800
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1451875802}
+  - component: {fileID: 1451875801}
+  m_Layer: 0
+  m_Name: DialogueManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1451875801
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1451875800}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 72ef4f660d16b854bbcc69f7308ae709, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DialogueManager
+  inkJson: {fileID: 4900000, guid: 1fdf4c631d8f01046b0b5c3af348dc1d, type: 3}
+--- !u!4 &1451875802
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1451875800}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1487297944
 GameObject:
   m_ObjectHideFlags: 0
@@ -28462,6 +28507,10 @@ PrefabInstance:
       value: QuestPoint
       objectReference: {fileID: 0}
     - target: {fileID: 3113430899395709463, guid: 6c1ec84499429524996a5b48e7efa0ce, type: 3}
+      propertyPath: dialogueKnotName
+      value: npc
+      objectReference: {fileID: 0}
+    - target: {fileID: 3113430899395709463, guid: 6c1ec84499429524996a5b48e7efa0ce, type: 3}
       propertyPath: questInfoForPoint
       value: 
       objectReference: {fileID: 11400000, guid: 0d3b085434352dd45a6de37cefc1ae62, type: 2}
@@ -28534,6 +28583,7 @@ SceneRoots:
   - {fileID: 341090647}
   - {fileID: 1003504672}
   - {fileID: 395071874}
+  - {fileID: 1451875802}
   - {fileID: 1022272254}
   - {fileID: 1139810805}
   - {fileID: 1238651736}

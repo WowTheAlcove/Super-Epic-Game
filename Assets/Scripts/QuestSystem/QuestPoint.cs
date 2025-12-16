@@ -43,14 +43,14 @@ public class QuestPoint : MonoBehaviour
     }
 
     private void BingoBongo_performed(UnityEngine.InputSystem.InputAction.CallbackContext obj) {
-        if (!playerIsNear) {x
-            return;x
+        if (!playerIsNear) {
+            return;
         }
         
         //if we have a knot name defined, try to start dialogue w/ it
         if (!dialogueKnotName.Equals(""))
         {
-            GameEventsManager.Instance.dialogueEvents.InvokeOnEnterDialogue(this, ""string knotName"");
+            GameEventsManager.Instance.dialogueEvents.InvokeOnEnterDialogue(this, dialogueKnotName);
         }
         if (currentQuestState == QuestState.CAN_START && isStartPoint) {
             GameEventsManager.Instance.questEvents.InvokeStartQuest(this, questId, (int)NetworkManager.Singleton.LocalClientId);

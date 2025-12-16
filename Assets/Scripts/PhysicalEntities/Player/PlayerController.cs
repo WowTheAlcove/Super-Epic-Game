@@ -161,6 +161,17 @@ public class PlayerController : NetworkBehaviour, IDataPersistence {
     #endregion
 
     #region Performing Input Actions
+
+    public void DisableInput()
+    {
+        myPlayerInputActions.Player.Disable();
+    }
+
+    public void EnableInput()
+    {
+        myPlayerInputActions.Player.Enable();
+    }
+
     private void BingoBongo_performed(InputAction.CallbackContext obj) {
         bingoBongoStorer.IncrementBingoBongoCount();
     }
