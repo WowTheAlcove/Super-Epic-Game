@@ -1,3 +1,4 @@
+using Unity.AppUI.UI;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -7,6 +8,7 @@ public class GameEventsManager : NetworkBehaviour
 
     public MiscEvents miscEvents;
     public QuestEvents questEvents;
+    public DialogueEvents dialogueEvents;
 
     private void Awake() {
         if (Instance != null) {
@@ -17,5 +19,6 @@ public class GameEventsManager : NetworkBehaviour
 
         questEvents = new QuestEvents();
         miscEvents = new MiscEvents();
+        dialogueEvents = new DialogueEvents();
     }
 }

@@ -1,13 +1,8 @@
 using Cinemachine;
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using Unity.Netcode;
-using UnityEditor;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using UnityEngine.UIElements;
-using static UnityEditor.Timeline.TimelinePlaybackControls;
 
 public class PlayerController : NetworkBehaviour, IDataPersistence {
     [Header("Player stats")]

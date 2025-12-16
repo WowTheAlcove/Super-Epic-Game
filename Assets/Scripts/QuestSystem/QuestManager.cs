@@ -93,20 +93,22 @@ public class QuestManager : NetworkBehaviour, IDataPersistence
     }
 
     //changes a quest's state and broadcasts the change with the event manager
-    private void ChangeQuestState(int playerIndex, string questToChangeId, QuestState newState) {
+    private void ChangeQuestStateForGivenPlayerIndex(int playerIndex, string questToChangeId, QuestState newState) {
         Quest quest = GetQuestByID(questToChangeId, playerIndex);
         quest.state = newState;
         InvokeQuestStateChangeEventOnGivenClientRpc(playerIndex, quest.info.id, newState);
     }
 
-    private void CheckIfSharedThenChangeQuestState(int playerIndex, string questToChangeId, QuestState newState) {
+    //If the quest is shared, then change the quest state on all clients
+    //If not, then only on the 
+    private void ChangeQuestStateOnAppropriateClients(int playerIndex, string questToChangeId, QuestState newState) {
         Quest quest = GetQuestByID(questToChangeId, playerIndex);
         if(quest.info.IsShared) {
             for(int i = 0; i < playerQuestMaps.Count; i++) {
-                ChangeQuestState(i, questToChangeId, newState);
+                ChangeQuestStateForGivenPlayerIndex(i, questToChangeId, newState);
             }
         } else {
-            ChangeQuestState(playerIndex, questToChangeId, newState);
+            ChangeQuestStateForGivenPlayerIndex(playerIndex, questToChangeId, newState);
         }
     }
 
@@ -121,14 +123,14 @@ public class QuestManager : NetworkBehaviour, IDataPersistence
 
                     if (CheckRequirementsMet(quest, i)) {
                         //Debug.Log("Quest requirements met for quest: " + quest.info.id);
-                        ChangeQuestState(i, quest.info.id, QuestState.CAN_START);
+                        ChangeQuestStateForGivenPlayerIndex(i, quest.info.id, QuestState.CAN_START);
                     }
                 } else if (quest.state == QuestState.CAN_START){
                     //if the requirements were marked as met
 
                     if (!CheckRequirementsMet(quest, i)) {
                         //Debug.Log("Quest requirements no longer met for quest: " + quest.info.id);
-                        ChangeQuestState(i, quest.info.id, QuestState.REQUIREMENTS_NOT_MET);
+                        ChangeQuestStateForGivenPlayerIndex(i, quest.info.id, QuestState.REQUIREMENTS_NOT_MET);
                     }
                 }
             }
@@ -170,7 +172,7 @@ public class QuestManager : NetworkBehaviour, IDataPersistence
             return;
         }
 
-        CheckIfSharedThenChangeQuestState(playerIndex, questId, QuestState.IN_PROGRESS);
+        ChangeQuestStateOnAppropriateClients(playerIndex, questId, QuestState.IN_PROGRESS);
 
         quest.InstantiateCurrentQuestStepPrefab(this.transform);
     }
@@ -183,7 +185,7 @@ public class QuestManager : NetworkBehaviour, IDataPersistence
         if (quest.CurrentQuestStepExists()) { // if there is another step, instantiate it
             quest.InstantiateCurrentQuestStepPrefab(this.transform);
         } else {// if there are no more steps, mark the quest as ready to finish
-            CheckIfSharedThenChangeQuestState(playerIndex, questId, QuestState.CAN_FINISH);
+            ChangeQuestStateOnAppropriateClients(playerIndex, questId, QuestState.CAN_FINISH);
         }
     }
 
@@ -197,7 +199,7 @@ public class QuestManager : NetworkBehaviour, IDataPersistence
         }
 
 
-        CheckIfSharedThenChangeQuestState(playerIndex, questId, QuestState.FINISHED);
+        ChangeQuestStateOnAppropriateClients(playerIndex, questId, QuestState.FINISHED);
 
         quest.InstantiateQuestRewardPrefab(this.transform); 
 

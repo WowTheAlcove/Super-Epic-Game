@@ -4,6 +4,11 @@ using Unity.Netcode;
 [RequireComponent(typeof(CircleCollider2D))]
 public class QuestPoint : MonoBehaviour
 {
+    [Header("Dialogue (optional)")] [SerializeField]
+    private string dialogueKnotName;
+
+    
+    
     [Header("Quest")]
     [SerializeField] private QuestInfoSO questInfoForPoint;
 
@@ -38,8 +43,14 @@ public class QuestPoint : MonoBehaviour
     }
 
     private void BingoBongo_performed(UnityEngine.InputSystem.InputAction.CallbackContext obj) {
-        if (!playerIsNear) {
-            return;
+        if (!playerIsNear) {x
+            return;x
+        }
+        
+        //if we have a knot name defined, try to start dialogue w/ it
+        if (!dialogueKnotName.Equals(""))
+        {
+            GameEventsManager.Instance.dialogueEvents.InvokeOnEnterDialogue(this, ""string knotName"");
         }
         if (currentQuestState == QuestState.CAN_START && isStartPoint) {
             GameEventsManager.Instance.questEvents.InvokeStartQuest(this, questId, (int)NetworkManager.Singleton.LocalClientId);

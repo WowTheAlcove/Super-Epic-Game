@@ -1,6 +1,3 @@
-using JetBrains.Annotations;
-using System.Collections;
-using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 
@@ -10,6 +7,7 @@ public class BingoBongoDisplayer : MonoBehaviour
     private PlayerInputActions myPlayerInputActions;
     private TextMeshProUGUI bingoBongoTMP;
     [SerializeField] private GameObject kickablePot; //for testing
+    
     private void Awake() {
         bingoBongoTMP = this.GetComponent<TextMeshProUGUI>();
     }
@@ -24,9 +22,6 @@ public class BingoBongoDisplayer : MonoBehaviour
 
     private void UIController_OnAllInventoryPanelsRefreshRequested(object sender, System.EventArgs e) {
         RefreshVisual();
-    }
-
-    private void Update() {
     }
 
     public void SetBingoBongoStorerConnection(BingoBongoStorer bingoBongoStorerToDisplay) {
