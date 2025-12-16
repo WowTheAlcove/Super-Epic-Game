@@ -47,7 +47,7 @@ public class InventoryPersistence : NetworkBehaviour, IDataPersistence {
         InventorySaveData inventoryData = new InventorySaveData();
 
         for(int i = 0; i < inventoryStateStorer.GetNumOfSlots(); i++) {
-            ItemSO itemSOToGetID = inventoryStateStorer.GetNullableItemSOAtInventoryIndex(i);
+            ItemSO itemSOToGetID = inventoryStateStorer.GetItemSOAtInventoryIndex(i);
             int itemIDToSave;
             if (itemSOToGetID == null) {
                 itemIDToSave = -1;

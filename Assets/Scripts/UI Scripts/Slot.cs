@@ -32,15 +32,6 @@ public class Slot : MonoBehaviour
             //do nothing, the slot is empty and so nothing will appear in it
         }
     }
-
-    public GameObject GetParentInventoryPanel() {
-        return transform.parent.gameObject;
-    }
-
-    public InventoryStateStorer GetAssociatedInventoryStateStorer() {
-        return transform.parent.GetComponent<InventoryDisplayer>().GetCurrentInventoryStateStorer();
-    }
-
     public InventoryDisplayer GetInventoryDisplayer() {
         return transform.parent.GetComponent<InventoryDisplayer>();
     }

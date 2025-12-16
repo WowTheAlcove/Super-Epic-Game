@@ -110,13 +110,13 @@ public class InventoryStateStorer : NetworkBehaviour {
         Vector2 dropOffset = Random.insideUnitCircle.normalized * Random.Range(minDropDistance, maxDropDistance);
         Vector2 dropPosition = (Vector2)transform.position + dropOffset;
 
-        NetworkObject droppedWorldItemNORef = Instantiate(GetNullableItemSOAtInventoryIndex(slotIndex).worldItemPrefab, dropPosition, Quaternion.identity).GetComponent<NetworkObject>();
+        NetworkObject droppedWorldItemNORef = Instantiate(GetItemSOAtInventoryIndex(slotIndex).worldItemPrefab, dropPosition, Quaternion.identity).GetComponent<NetworkObject>();
         droppedWorldItemNORef.Spawn(); // Spawn the item in the world
 
         EmptySlotServerRpc(slotIndex);
     }
 
-    public ItemSO GetNullableItemSOAtInventoryIndex(int index) {
+    public ItemSO GetItemSOAtInventoryIndex(int index) {
         if (index < 0 || index >= numOfSlots) {
             Debug.LogError("Index out of bounds when trying to get item from inventory slot: " + index);
             return null;

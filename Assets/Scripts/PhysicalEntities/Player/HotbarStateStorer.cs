@@ -15,7 +15,7 @@ public class HotbarStateStorer : InventoryStateStorer
     }
 
     public ItemSO GetSelectedIndexItemSO() {
-        return GetNullableItemSOAtInventoryIndex(selectedSlotIndex.Value);
+        return GetItemSOAtInventoryIndex(selectedSlotIndex.Value);
     }
 
     public NetworkVariable<int> SelectedSlotIndex => selectedSlotIndex;

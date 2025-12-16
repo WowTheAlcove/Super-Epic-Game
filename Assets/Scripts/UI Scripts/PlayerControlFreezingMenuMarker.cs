@@ -4,13 +4,13 @@ public class PlayerControlFreezingMenuMarker : MonoBehaviour
 {
     private void OnDisable() {
         if (UIController.Instance != null) {
-            UIController.Instance.ControlFreezingMenuDisabled();
+            UIController.Instance.InputFreezingMenuDisabled();
         }
     }
 
     private void OnEnable() {
         if (UIController.Instance != null) {
-            UIController.Instance.ControlFreezingMenuEnabled();
+            UIController.Instance.InputFreezingMenuEnabled();
         }
     }
 }

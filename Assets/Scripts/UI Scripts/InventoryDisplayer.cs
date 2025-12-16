@@ -36,7 +36,7 @@ public class InventoryDisplayer : MonoBehaviour
         if (myCurrentSlots.Count == myCurrentInventoryStateStorer.CurrentInventory.Count) {
             //if the number of slots to display hasn't changed since the last visual refresh
             for (int i = 0; i < myCurrentInventoryStateStorer.CurrentInventory.Count; i++) {
-                ItemSO itemSOToGiveSlot = myCurrentInventoryStateStorer.GetNullableItemSOAtInventoryIndex(i);
+                ItemSO itemSOToGiveSlot = myCurrentInventoryStateStorer.GetItemSOAtInventoryIndex(i);
                 myCurrentSlots[i].SetCurrentSlotItemSO(itemSOToGiveSlot); 
                 myCurrentSlots[i].RefreshVisual();
             }
@@ -60,7 +60,7 @@ public class InventoryDisplayer : MonoBehaviour
             Slot newSlot = Instantiate(slotPrefab, transform).GetComponent<Slot>();
             myCurrentSlots.Add(newSlot);
             //give the slots index and item, and then call it's refresh
-            ItemSO itemSOToGiveSlot = myCurrentInventoryStateStorer.GetNullableItemSOAtInventoryIndex(i);
+            ItemSO itemSOToGiveSlot = myCurrentInventoryStateStorer.GetItemSOAtInventoryIndex(i);
             newSlot.Initialize(i);
             newSlot.SetCurrentSlotItemSO(itemSOToGiveSlot);
             newSlot.RefreshVisual();

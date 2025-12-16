@@ -49,8 +49,8 @@ public class PlayerController : NetworkBehaviour, IDataPersistence {
         Cinemachine.CinemachineVirtualCamera cmCamera = FindFirstObjectByType<CinemachineVirtualCamera>();
         cmCamera.Follow = this.transform;
 
-        UIController.Instance.OnControlFreezingMenuEnabled += UIController_OnControlFreezingMenuEnabled;
-        UIController.Instance.OnControlFreezingMenuDisabled += UIController_OnControlFreezingMenuDisabled;
+        UIController.Instance.OnInputFreezingMenuEnabled += UIController_OnInputFreezingMenuEnabled;
+        UIController.Instance.OnInputFreezingMenuDisabled += UIController_OnInputFreezingMenuDisabled;
     }
 
     public override void OnNetworkSpawn() {
@@ -151,13 +151,13 @@ public class PlayerController : NetworkBehaviour, IDataPersistence {
     private void CurrentInventory_OnListChanged(NetworkListEvent<int> changeEvent) {
         EquipItemInSelectedHotbarSlot();
     }
-    private void UIController_OnControlFreezingMenuDisabled(object sender, UIController.OnControlFreezingMenuDisabledEventArgs e) {
-        if (!e.thereAreOtherControlFreezingMenus && IsOwner) {
+    private void UIController_OnInputFreezingMenuDisabled(object sender, UIController.OnControlFreezingMenuDisabledEventArgs e) {
+        if (!e.thereAreOtherInputFreezingMenus && IsOwner) {
             myPlayerInputActions.Player.Enable();
         }
     }
 
-    private void UIController_OnControlFreezingMenuEnabled(object sender, EventArgs e) {
+    private void UIController_OnInputFreezingMenuEnabled(object sender, EventArgs e) {
         if (IsOwner) {
             myPlayerInputActions.Player.Disable();
         }

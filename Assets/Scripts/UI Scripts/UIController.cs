@@ -29,11 +29,11 @@ public class UIController : MonoBehaviour
 
     public event EventHandler OnAllInventoryPanelsRefreshRequested;
     public event EventHandler OnAllInventoryPanelsHideRequested;
-    public event EventHandler OnControlFreezingMenuEnabled;
-    public event EventHandler<OnControlFreezingMenuDisabledEventArgs> OnControlFreezingMenuDisabled;
+    public event EventHandler OnInputFreezingMenuEnabled;
+    public event EventHandler<OnControlFreezingMenuDisabledEventArgs> OnInputFreezingMenuDisabled;
 
     public class OnControlFreezingMenuDisabledEventArgs : EventArgs {
-        public bool thereAreOtherControlFreezingMenus;
+        public bool thereAreOtherInputFreezingMenus;
     }
 
 
@@ -84,6 +84,25 @@ public class UIController : MonoBehaviour
         }
     }
 
+    //finding the local player for references to the ICs you should always have
+    private GameObject FindLocalPlayerObject()
+    {
+        // Find all Player GameObjects in the scene
+        PlayerController[] allPlayers = FindObjectsByType<PlayerController>(FindObjectsSortMode.None);
+
+        foreach (PlayerController player in allPlayers)
+        {
+            // Check if the player is owned by the local client
+            if (player.IsOwner)
+            {
+                return player.gameObject;
+            }
+        }
+
+        Debug.LogWarning("A UIController could not find a local Player GameObject in the scene.");
+        return null;
+    }
+
     #endregion
     private void ToggleMenu_performed(UnityEngine.InputSystem.InputAction.CallbackContext obj) {
         if (IsDisplayingSomethingThatShouldBeHiddenOnMenuToggle()) {
@@ -120,6 +139,7 @@ public class UIController : MonoBehaviour
 
     #endregion
 
+    #region Housekeeping
     public void RefreshAllActiveInventoryPanels() {
         OnAllInventoryPanelsRefreshRequested?.Invoke(this, EventArgs.Empty);
     }
@@ -128,39 +148,15 @@ public class UIController : MonoBehaviour
         OnAllInventoryPanelsHideRequested?.Invoke(this, EventArgs.Empty);
     }
 
-    public void ControlFreezingMenuEnabled(){
-        OnControlFreezingMenuEnabled?.Invoke(this, EventArgs.Empty);
+    public void InputFreezingMenuEnabled(){
+        OnInputFreezingMenuEnabled?.Invoke(this, EventArgs.Empty);
     }
 
-    public void ControlFreezingMenuDisabled() {
-        OnControlFreezingMenuDisabled?.Invoke(this, new OnControlFreezingMenuDisabledEventArgs() {
-            thereAreOtherControlFreezingMenus = IsDisplayingAControlFreezingMenu()
+    public void InputFreezingMenuDisabled() {
+        OnInputFreezingMenuDisabled?.Invoke(this, new OnControlFreezingMenuDisabledEventArgs() {
+            thereAreOtherInputFreezingMenus = IsDisplayingAnInputFreezingMenu()
         });
     }
-
-    #region Hotbar Functions
-    public void HighlightHotbarSelectedSlot(int indexToHighlight) {
-        hotbarUisDisplayer.ChangeSelectedSlot(indexToHighlight);
-    }
-
-    #endregion
-    //finding the local player for references to the ICs you should always have
-    private GameObject FindLocalPlayerObject() {
-        // Find all Player GameObjects in the scene
-        PlayerController[] allPlayers = FindObjectsByType<PlayerController>(FindObjectsSortMode.None);
-
-        foreach (PlayerController player in allPlayers) {
-            // Check if the player is owned by the local client
-            if (player.IsOwner)
-            {
-                return player.gameObject;
-            }
-        }
-
-        Debug.LogWarning("A UIController could not find a local Player GameObject in the scene.");
-        return null;
-    }
-
     //returns a list of RectTransforms for all active inventory panels, created for InventoryItemMovementHandler to check if the mouse is over any of them
     public List<RectTransform> GetAllActiveInventoryPanelRectTransforms() {
         List<RectTransform> activeInventoryPanelRects = new List<RectTransform>();
@@ -181,6 +177,13 @@ public class UIController : MonoBehaviour
         return activeInventoryPanelRects;
     }
 
+    #endregion
+
+    public void HighlightHotbarSelectedSlot(int indexToHighlight) {
+        hotbarUisDisplayer.ChangeSelectedSlot(indexToHighlight);
+    }
+
+
     private bool IsDisplayingSomethingThatShouldBeHiddenOnMenuToggle() {
         IShouldHideOnMenuToggle[] allPanelsThatShouldBeHiddenOnMenuToggle = GetComponentsInChildren<IShouldHideOnMenuToggle>();
         foreach (IShouldHideOnMenuToggle panel in allPanelsThatShouldBeHiddenOnMenuToggle) {
@@ -191,10 +194,10 @@ public class UIController : MonoBehaviour
         return false;
     }
 
-    private bool IsDisplayingAControlFreezingMenu() {
-        PlayerControlFreezingMenuMarker[] menuThatShouldFreezeControls = GetComponentsInChildren<PlayerControlFreezingMenuMarker>();
+    private bool IsDisplayingAnInputFreezingMenu() {
+        PlayerControlFreezingMenuMarker[] menuThatShouldFreezeInput = GetComponentsInChildren<PlayerControlFreezingMenuMarker>();
         
-        foreach (PlayerControlFreezingMenuMarker menu in menuThatShouldFreezeControls) {
+        foreach (PlayerControlFreezingMenuMarker menu in menuThatShouldFreezeInput) {
             if (menu.gameObject.activeSelf) {
                 return true;
             }
