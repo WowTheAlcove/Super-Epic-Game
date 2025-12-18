@@ -1,14 +1,10 @@
+using Mono.Cecil.Cil;
 using UnityEngine;
 using Unity.Netcode;
 
 [RequireComponent(typeof(CircleCollider2D))]
 public class QuestPoint : MonoBehaviour
 {
-    [Header("Dialogue (optional)")] [SerializeField]
-    private string dialogueKnotName;
-
-    
-    
     [Header("Quest")]
     [SerializeField] private QuestInfoSO questInfoForPoint;
 
@@ -26,7 +22,6 @@ public class QuestPoint : MonoBehaviour
 
     private void Awake() {
         questId = questInfoForPoint.id;
-
         questIcon = GetComponentInChildren<QuestIcon>();
     }
 
@@ -47,11 +42,6 @@ public class QuestPoint : MonoBehaviour
             return;
         }
         
-        //if we have a knot name defined, try to start dialogue w/ it
-        if (!dialogueKnotName.Equals(""))
-        {
-            GameEventsManager.Instance.dialogueEvents.InvokeOnEnterDialogue(this, dialogueKnotName);
-        }
         if (currentQuestState == QuestState.CAN_START && isStartPoint) {
             GameEventsManager.Instance.questEvents.InvokeStartQuest(this, questId, (int)NetworkManager.Singleton.LocalClientId);
         } else if (currentQuestState == QuestState.CAN_FINISH && isFinishPoint){

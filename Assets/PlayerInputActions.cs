@@ -345,7 +345,7 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
             ""id"": ""900efaa6-2d99-4cef-8a3b-37d337de5483"",
             ""actions"": [
                 {
-                    ""name"": ""Skip Dialogue"",
+                    ""name"": ""Advance Dialogue"",
                     ""type"": ""Button"",
                     ""id"": ""f1114f84-8eac-45ae-a077-7164440b29db"",
                     ""expectedControlType"": """",
@@ -362,7 +362,7 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": """",
-                    ""action"": ""Skip Dialogue"",
+                    ""action"": ""Advance Dialogue"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 }
@@ -385,7 +385,7 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
         m_Player_MousePosition = m_Player.FindAction("MousePosition", throwIfNotFound: true);
         // Dialogue
         m_Dialogue = asset.FindActionMap("Dialogue", throwIfNotFound: true);
-        m_Dialogue_SkipDialogue = m_Dialogue.FindAction("Skip Dialogue", throwIfNotFound: true);
+        m_Dialogue_AdvanceDialogue = m_Dialogue.FindAction("Advance Dialogue", throwIfNotFound: true);
     }
 
     ~@PlayerInputActions()
@@ -662,7 +662,7 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
     // Dialogue
     private readonly InputActionMap m_Dialogue;
     private List<IDialogueActions> m_DialogueActionsCallbackInterfaces = new List<IDialogueActions>();
-    private readonly InputAction m_Dialogue_SkipDialogue;
+    private readonly InputAction m_Dialogue_AdvanceDialogue;
     /// <summary>
     /// Provides access to input actions defined in input action map "Dialogue".
     /// </summary>
@@ -675,9 +675,9 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
         /// </summary>
         public DialogueActions(@PlayerInputActions wrapper) { m_Wrapper = wrapper; }
         /// <summary>
-        /// Provides access to the underlying input action "Dialogue/SkipDialogue".
+        /// Provides access to the underlying input action "Dialogue/AdvanceDialogue".
         /// </summary>
-        public InputAction @SkipDialogue => m_Wrapper.m_Dialogue_SkipDialogue;
+        public InputAction @AdvanceDialogue => m_Wrapper.m_Dialogue_AdvanceDialogue;
         /// <summary>
         /// Provides access to the underlying input action map instance.
         /// </summary>
@@ -704,9 +704,9 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
         {
             if (instance == null || m_Wrapper.m_DialogueActionsCallbackInterfaces.Contains(instance)) return;
             m_Wrapper.m_DialogueActionsCallbackInterfaces.Add(instance);
-            @SkipDialogue.started += instance.OnSkipDialogue;
-            @SkipDialogue.performed += instance.OnSkipDialogue;
-            @SkipDialogue.canceled += instance.OnSkipDialogue;
+            @AdvanceDialogue.started += instance.OnAdvanceDialogue;
+            @AdvanceDialogue.performed += instance.OnAdvanceDialogue;
+            @AdvanceDialogue.canceled += instance.OnAdvanceDialogue;
         }
 
         /// <summary>
@@ -718,9 +718,9 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
         /// <seealso cref="DialogueActions" />
         private void UnregisterCallbacks(IDialogueActions instance)
         {
-            @SkipDialogue.started -= instance.OnSkipDialogue;
-            @SkipDialogue.performed -= instance.OnSkipDialogue;
-            @SkipDialogue.canceled -= instance.OnSkipDialogue;
+            @AdvanceDialogue.started -= instance.OnAdvanceDialogue;
+            @AdvanceDialogue.performed -= instance.OnAdvanceDialogue;
+            @AdvanceDialogue.canceled -= instance.OnAdvanceDialogue;
         }
 
         /// <summary>
@@ -840,11 +840,11 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
     public interface IDialogueActions
     {
         /// <summary>
-        /// Method invoked when associated input action "Skip Dialogue" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// Method invoked when associated input action "Advance Dialogue" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
         /// </summary>
         /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
-        void OnSkipDialogue(InputAction.CallbackContext context);
+        void OnAdvanceDialogue(InputAction.CallbackContext context);
     }
 }

@@ -8,6 +8,7 @@ public class StartConnectionUI : MonoBehaviour
     [SerializeField] private Button startClientButton;
 
     private void Awake() {
+        this.gameObject.SetActive(true);
         startHostButton.onClick.AddListener(OnStartHostButtonClicked);
         startClientButton.onClick.AddListener(OnStartClientButtonClicked);
     }

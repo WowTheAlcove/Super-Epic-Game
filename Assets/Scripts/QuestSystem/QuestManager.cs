@@ -168,7 +168,7 @@ public class QuestManager : NetworkBehaviour, IDataPersistence
         Quest quest = GetQuestByID(questId, playerIndex);
 
         if(quest.state != QuestState.CAN_START) {
-            Debug.LogError("Tried to start a quest that wasn't in the CAN_START state");
+            Debug.LogWarning("Tried to start a quest that wasn't in the CAN_START state");
             return;
         }
 
@@ -194,7 +194,7 @@ public class QuestManager : NetworkBehaviour, IDataPersistence
         Quest quest = GetQuestByID(questId, playerIndex);
 
         if(quest.state != QuestState.CAN_FINISH) {
-            Debug.LogError("Tried to finish a quest that wasn't in the CAN_FINISH state");
+            Debug.LogWarning("Tried to finish a quest that wasn't in the CAN_FINISH state");
             return;
         }
 
