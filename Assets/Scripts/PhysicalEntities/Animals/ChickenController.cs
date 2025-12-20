@@ -11,7 +11,7 @@ public class ChickenController : MonoBehaviour, IInteractable
 
     private void Awake()
     {
-        knot = "ChickenDefault";
+        knot = "ChickenRoot";
     }
 
     private void Start()
@@ -27,8 +27,8 @@ public class ChickenController : MonoBehaviour, IInteractable
 
     private void OnDestroy()
     {
-        GameEventsManager.Instance.dialogueEvents.InvokeOnUnbindInkExternalFunction(this, "startFollowingRecentPlayer");
-        GameEventsManager.Instance.dialogueEvents.InvokeOnUnbindInkExternalFunction(this, "stopFollowing");
+        GameEventsManager.Instance.dialogueEvents.InvokeOnUnbindInkExternalFunction(this, "StartFollowingRecentPlayer");
+        GameEventsManager.Instance.dialogueEvents.InvokeOnUnbindInkExternalFunction(this, "StopFollowing");
     }
 
     public void Interact(PlayerController playerInteracting)
@@ -52,10 +52,12 @@ public class ChickenController : MonoBehaviour, IInteractable
         }
         
         StartFollowing(recentlyInteractedPlayer.transform);
+        GameEventsManager.Instance.dialogueEvents.InvokeOnUpdateInkVariable(this, "IsFollowingPlayer", new BoolValue(true));
     }
 
     private void StopFollowing()
     {
         myFollowTransformScript.enabled = false;
+        GameEventsManager.Instance.dialogueEvents.InvokeOnUpdateInkVariable(this, "IsFollowingPlayer", new BoolValue(false));
     }
 }
