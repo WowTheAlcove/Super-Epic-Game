@@ -1,10 +1,10 @@
 //example usages ===========================
-=== start ===
+=== RandomTest1 ===
 Time for a{|nother} storylet!
 + [Ok]
- -> select(-> example_storylets) -> start
+ -> select(-> example_storylets) -> RandomTest1
 
-=== test ===
+=== RandomTest2 ===
 -> select(-> example_storylets) ->
 -> END
 

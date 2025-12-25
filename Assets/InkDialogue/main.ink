@@ -2,9 +2,8 @@ INCLUDE Chicken.ink
 INCLUDE DrunkCat.ink
 INCLUDE RandomStoryletSelector.ink
 
-
 VAR Drink3PotionsQuestState = "REQUIREMENTS_NOT_MET"
-VAR testBool = false
+VAR testBool = true
 
 EXTERNAL StartQuest(questId)
 EXTERNAL AdvanceQuest(questId)

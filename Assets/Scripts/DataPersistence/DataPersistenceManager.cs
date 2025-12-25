@@ -4,6 +4,7 @@ using UnityEngine;
 using System.Linq;
 using Unity.Netcode;
 using System.Runtime.CompilerServices;
+using UnityEngine.Profiling;
 
 public class DataPersistenceManager : NetworkBehaviour {
     public static DataPersistenceManager Instance { get; private set; }
@@ -27,7 +28,7 @@ public class DataPersistenceManager : NetworkBehaviour {
     private SimulationMode2D originalPhysics2DMode;
 
 
-    private GameData mostRecentlyUpdatedGameData; //this needs to be stored outside of methods so that players can join and get their data loaded
+    private GameData currentGameData; //this needs to be stored outside of methods so that players can join and get their data loaded
     private FileDataHandler dataHandler;
 
     private List<IDataPersistence> dataPersistenceObjects;
@@ -107,6 +108,7 @@ public class DataPersistenceManager : NetworkBehaviour {
     }
 
     //deletes dynamic prefabs, and pushes default values for GameData() (mostly empty lists)
+    //DEPRECATED
     public void ResetGame() {
         if (!IsServer) {
             //this command can only be run on the server
@@ -130,22 +132,22 @@ public class DataPersistenceManager : NetworkBehaviour {
         clientsReadyForGameplay.Clear();
 
         //load any saved data from file using data handler
-        this.mostRecentlyUpdatedGameData = dataHandler.Load(saveFileType);
+        this.currentGameData = dataHandler.Load(saveFileType);
 
         //if no data can be loaded, make a new game
-        if (this.mostRecentlyUpdatedGameData == null) {
+        if (this.currentGameData == null) {
             Debug.LogWarning("No save data found, creating new game data");
-            this.mostRecentlyUpdatedGameData = new GameData();
+            this.currentGameData = new GameData();
         }
 
         ClearExistingDynamicPrefabs();
-        RespawnSaveStateOfDynamicPrefabs(mostRecentlyUpdatedGameData);
+        RespawnSaveStateOfDynamicPrefabs(currentGameData);
 
         //push loaded data to all scripts in the game that use that data
         this.dataPersistenceObjects = FindAllDataPersistenceObjects();
 
         foreach (IDataPersistence persistentObject in dataPersistenceObjects) {
-            persistentObject.LoadData(mostRecentlyUpdatedGameData);
+            persistentObject.LoadData(currentGameData);
         }
     }
 
@@ -202,7 +204,6 @@ public class DataPersistenceManager : NetworkBehaviour {
     }
 
     public void SaveGame(SaveFileType saveFileType) {
-
         if (!IsServer) {
             //this command can only be run on the server
 
@@ -211,25 +212,67 @@ public class DataPersistenceManager : NetworkBehaviour {
             return;
         }
 
-        mostRecentlyUpdatedGameData = new GameData();
-
-
+        if (isLoading)
+        {
+            Debug.LogWarning("SaveGame() was called while still in a previous loading state. Cancelling...");
+            return;
+        }
+        
+        currentGameData = new GameData();
+        
         //find all dynamic prefab storers and save their prefabID and GUID
         this.dynamicPrefabStorers = FindAllDynamicPrefabStorers();
         foreach (DynamicPrefabStorer dynamicPrefabStorer in this.dynamicPrefabStorers) {
-            mostRecentlyUpdatedGameData.allDynamicPrefabs.Add(dynamicPrefabStorer.GetUniqueID(), dynamicPrefabStorer.GetPrefabID());
+            currentGameData.allDynamicPrefabs.Add(dynamicPrefabStorer.GetUniqueID(), dynamicPrefabStorer.GetPrefabID());
         }
-
+        
         //take data from all scripts using IDataPersistent and save it
         this.dataPersistenceObjects = FindAllDataPersistenceObjects();
         foreach (IDataPersistence persistentObject in dataPersistenceObjects) {
-            persistentObject.SaveData(ref mostRecentlyUpdatedGameData);
+            persistentObject.SaveData(ref currentGameData);
+        }
+        
+        //Wait until dialogue manager is done saving before saving
+        DialogueManager dialogueManager = FindAnyObjectByType<DialogueManager>();
+        if (dialogueManager != null)
+        {
+            StartCoroutine(SaveGameAfterDialogueSaved(saveFileType, dialogueManager));
+        }
+        else
+        {
+            //takes the gamedata object and saves it, serializing it in the filedatahandler's method
+            dataHandler.Save(currentGameData, saveFileType);
+        }
+
+    }
+    
+    //Wait until Dialogue Manager has saved
+    //Save game data with dataHandler
+    private IEnumerator SaveGameAfterDialogueSaved(SaveFileType saveFileType, DialogueManager dialogueManager)
+    {
+        //Register callback so DialogueManager can notify us when done
+        // bool dialogueSaveComplete = false;
+        // dialogueManager.RegisterSaveCompleteCallback(() => { dialogueSaveComplete = true; });
+    
+        //Wait for DialogueManager to finish (it will set the flag when done)
+        float timeout = 15f;
+        float elapsed = 0f;
+    
+        while (dialogueManager.IsSaving() && elapsed < timeout)
+        {
+            Debug.Log("Waiting for dialogue to finish saving so DPM can save");
+            yield return new WaitForSeconds(0.1f);
+            elapsed += 0.1f;
+        }
+    
+        if (dialogueManager.IsSaving())
+        {
+            Debug.LogWarning("Timeout waiting for DialogueManager save to complete. Saving anyway.");
         }
 
         //takes the gamedata object and saves it, serializing it in the filedatahandler's method
-        dataHandler.Save(mostRecentlyUpdatedGameData, saveFileType);
+        dataHandler.Save(currentGameData, saveFileType);
     }
-
 
     // Method to set loading state and pause/resume gameplay
     [Rpc(SendTo.ClientsAndHost)]
@@ -280,13 +323,13 @@ public class DataPersistenceManager : NetworkBehaviour {
     }
 
     public void LoadPlayerData(PlayerController player) {
-        if (mostRecentlyUpdatedGameData == null) {
+        if (currentGameData == null) {
             Debug.LogWarning("No game data available to load player data from");
             return;
         }
 
         // Load the player's specific data
-        player.LoadData(mostRecentlyUpdatedGameData);
+        player.LoadData(currentGameData);
     }
 
     private List<IDataPersistence> FindAllDataPersistenceObjects() {
@@ -320,7 +363,7 @@ public class DataPersistenceManager : NetworkBehaviour {
 
     // returns whether or not the DPM has any game data loaded or saved
     public bool HasAnUpdatedGameData() {
-        return mostRecentlyUpdatedGameData != null;
+        return currentGameData != null;
     }
 
     private void ClearExistingDynamicPrefabs() {
@@ -340,7 +383,7 @@ public class DataPersistenceManager : NetworkBehaviour {
     private void RespawnSaveStateOfDynamicPrefabs(GameData gameDataToRespawnFrom) {
 
         //respawn each prefab, and give it whatever GUID it was dynamically assigned in the previous save state
-        foreach (KeyValuePair<string, string> prefabAndID in mostRecentlyUpdatedGameData.allDynamicPrefabs) {
+        foreach (KeyValuePair<string, string> prefabAndID in currentGameData.allDynamicPrefabs) {
             GameObject prefabToReinstantiate = dynamicPrefabDatabase.GetPrefabFromID(prefabAndID.Value);
 
             if (prefabToReinstantiate == null) {

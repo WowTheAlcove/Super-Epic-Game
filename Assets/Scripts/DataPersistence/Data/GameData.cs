@@ -14,6 +14,7 @@ public class GameData {
     public SerializableDictionary<string, PlayerData> allPlayerData;
     public SerializableDictionary<string, QuestSaveData> allQuestData;
     public SerializableDictionary<string, QuestStepData> allQuestStepData;
+    public SerializableDictionary<string, ClientsInkVariableSaveDataCollection> allClientsInkVariableSaveDataCollections;
 
     //the values in the constructor will be default values for new game
     public GameData() {
@@ -26,7 +27,7 @@ public class GameData {
         this.allDynamicPrefabs = new SerializableDictionary<string, string>();
         this.allQuestData = new SerializableDictionary<string, QuestSaveData>();
         this.allQuestStepData = new SerializableDictionary<string, QuestStepData>();
-
+        this.allClientsInkVariableSaveDataCollections = new SerializableDictionary<string, ClientsInkVariableSaveDataCollection>();
     }
 }
 
@@ -66,6 +67,27 @@ public class QuestStepData {
     public string questId;
     public int playerIndex;
     public string questStepState;
+}
+
+[System.Serializable]
+public class InkVariableSaveData
+{
+    public string type;
+    public int intValue;
+    public float floatValue;
+    public bool boolValue;
+    public string stringValue;
+}
+
+[System.Serializable]
+public class ClientsInkVariableSaveDataCollection
+{
+    public SerializableDictionary<string, InkVariableSaveData> inkVariables;
+    
+    public ClientsInkVariableSaveDataCollection()
+    {
+        inkVariables = new SerializableDictionary<string, InkVariableSaveData>();
+    }
 }
 
 #endregion

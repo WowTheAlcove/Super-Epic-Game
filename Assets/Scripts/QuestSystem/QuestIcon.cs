@@ -1,7 +1,11 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class QuestIcon : MonoBehaviour
 {
+    [Header("Tracked Quests")]
+    [SerializeField] private List<QuestInfoSO> trackedQuests;
+    
     [Header("Icons")]
     [SerializeField] private GameObject requirementsNotMetToStartIcon;
     [SerializeField] private GameObject canStartIcon;

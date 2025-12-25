@@ -96,6 +96,7 @@ public class QuestManager : NetworkBehaviour, IDataPersistence
     private void ChangeQuestStateForGivenPlayerIndex(int playerIndex, string questToChangeId, QuestState newState) {
         Quest quest = GetQuestByID(questToChangeId, playerIndex);
         quest.state = newState;
+        // Debug.Log("Changed quest: " + quest.info.name + " to state: " + quest.state);
         InvokeQuestStateChangeEventOnGivenClientRpc(playerIndex, quest.info.id, newState);
     }
 
@@ -121,7 +122,7 @@ public class QuestManager : NetworkBehaviour, IDataPersistence
                 if (quest.state == QuestState.REQUIREMENTS_NOT_MET) {
                     //if the requirements were marked as not met
 
-                    if (CheckRequirementsMet(quest, i)) {
+                    if (CheckRequirementsMet(quest, i)) { //if that quests requirements are actually met
                         //Debug.Log("Quest requirements met for quest: " + quest.info.id);
                         ChangeQuestStateForGivenPlayerIndex(i, quest.info.id, QuestState.CAN_START);
                     }
@@ -276,7 +277,7 @@ public class QuestManager : NetworkBehaviour, IDataPersistence
     [Rpc(SendTo.ClientsAndHost)]
     private void InvokeQuestStateChangeEventOnGivenClientRpc(int clientIdToInvokeEvent, string questId, QuestState newQuestState) {
         if ((int)NetworkManager.Singleton.LocalClientId == clientIdToInvokeEvent) {
-            //Debug.Log("Invoking quest state change event for quest: " + questId + " to state: " + newQuestState + " on client: " + clientIdToInvokeEvent);
+            Debug.Log("Invoking quest state change event for quest: " + questId + " to state: " + newQuestState + " on client: " + clientIdToInvokeEvent);
             GameEventsManager.Instance.questEvents.InvokeQuestStateChange(this, questId, newQuestState);
         }
     }

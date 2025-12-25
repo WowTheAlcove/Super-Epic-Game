@@ -52,12 +52,12 @@ public class ChickenController : MonoBehaviour, IInteractable
         }
         
         StartFollowing(recentlyInteractedPlayer.transform);
-        GameEventsManager.Instance.dialogueEvents.InvokeOnUpdateInkVariable(this, "IsFollowingPlayer", new BoolValue(true));
+        GameEventsManager.Instance.dialogueEvents.InvokeOnUpdateInkVariable(this, "IsFollowingPlayer", true);
     }
 
     private void StopFollowing()
     {
         myFollowTransformScript.enabled = false;
-        GameEventsManager.Instance.dialogueEvents.InvokeOnUpdateInkVariable(this, "IsFollowingPlayer", new BoolValue(false));
+        GameEventsManager.Instance.dialogueEvents.InvokeOnUpdateInkVariable(this, "IsFollowingPlayer", false);
     }
 }

@@ -94,11 +94,11 @@ public class DialogueEvents
     public class UpdateInkVariableEventArgs : EventArgs
     {
         public string variableName;
-        public Ink.Runtime.Object newValue;
+        public object newValue;
     }
     public event EventHandler<UpdateInkVariableEventArgs> OnUpdateInkVariable;
 
-    public void InvokeOnUpdateInkVariable(object sender, string passedVariableName, Ink.Runtime.Object passedNewValue)
+        public void InvokeOnUpdateInkVariable(object sender, string passedVariableName, object passedNewValue)
     {
         OnUpdateInkVariable?.Invoke(sender, new UpdateInkVariableEventArgs()
         {

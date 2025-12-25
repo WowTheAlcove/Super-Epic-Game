@@ -4,8 +4,8 @@ using Unity.Netcode;
 using UnityEditor.PackageManager;
 using UnityEngine;
 
-public class InventoryStateStorer : NetworkBehaviour {
 
+public class InventoryStateStorer : NetworkBehaviour {
     [SerializeField] private int numOfSlots;
 
     [SerializeField] private float minDropDistance = 2f;
