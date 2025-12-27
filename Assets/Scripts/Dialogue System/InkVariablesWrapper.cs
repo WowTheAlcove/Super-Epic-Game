@@ -40,7 +40,7 @@ public class InkVariablesWrapper
             Debug.LogWarning("Variable " + name + " not found in InkVariableWrapper's dictionary");
             return;
         }
-        Debug.Log("Updating Variable: " + name + " in InkVariableWrapper's dictionary to:  " + value);
+        // Debug.Log("Updating Variable: " + name + " in InkVariableWrapper's dictionary to:  " + value);
 
         object clrValue = value;
         if (value is Ink.Runtime.Value inkValue) //casting the ink.runtime.object to CLR object
@@ -83,7 +83,7 @@ public class InkVariablesWrapper
     }
     
     //returns ink variable dictionary in form of InkNSerializableVariable array
-    public InkNSerializableVariable[] ToNSerializableArray()
+    public InkNSerializableVariable[] InkVarsToNSerializableArray()
     {
         var serializableVariables = new InkNSerializableVariable[myVariables.Count];
         int i = 0;
@@ -98,7 +98,7 @@ public class InkVariablesWrapper
     }
 
     //Sets dictionary of ink variables from a given InkNSerializableVariable array
-    public void FromNSerializableArray(InkNSerializableVariable[] entries)
+    public void SetVarsFromNSerializableArray(InkNSerializableVariable[] entries)
     {
         myVariables.Clear();
 
@@ -112,26 +112,4 @@ public class InkVariablesWrapper
             SyncVariablesToStory(currentStoryObject);
         }
     }
-
-    // public void SaveData(ref GameData gameData)
-    // {
-    //     foreach (KeyValuePair<string, Ink.Runtime.Object> variable in myVariables)
-    //     {
-    //         InkVariableSaveData inkVariableSaveData = new InkVariableSaveData()
-    //         {
-    //             inkVariableSerialized = JsonUtility.ToJson(variable.Value)
-    //         };
-    //         gameData.allInkVariableData.Add(variable.Key, inkVariableSaveData);
-    //     }
-    // }
-    //
-    // public void LoadData(ref GameData gameData)
-    // {
-    //     myVariables.Clear();
-    //     foreach (KeyValuePair<string, InkVariableSaveData> variableData in gameData.allInkVariableData)
-    //     {
-    //         Ink.Runtime.Object deserializedInkVariableValue = JsonUtility.FromJson<Ink.Runtime.Object>(variableData.Value.inkVariableSerialized);
-    //         myVariables.Add(variableData.Key, deserializedInkVariableValue);
-    //     }
-    // }
 }

@@ -99,9 +99,8 @@ public class DialogueManager : NetworkBehaviour, IDataPersistence
     {
         if (myStory.canContinue)
         {
-            Debug.Log("test");
             string dialogueLine = myStory.Continue();
-            Debug.Log("line" + dialogueLine);
+            // Debug.Log("line: " + dialogueLine);
             //handling weird cases where Ink gives empty dialogue lines
             while (IsLineBlank(dialogueLine) && myStory.canContinue)
             {
@@ -202,7 +201,7 @@ public class DialogueManager : NetworkBehaviour, IDataPersistence
     {
         myStory.BindExternalFunction("StartQuest", (string questId) => 
         {
-            Debug.Log("binding StartQuest");
+            // Debug.Log("binding StartQuest");
             GameEventsManager.Instance.questEvents.InvokeStartQuest(this, questId, (int)NetworkManager.Singleton.LocalClientId);            
         });
         myStory.BindExternalFunction("AdvanceQuest", (string questId) =>
@@ -230,9 +229,9 @@ public class DialogueManager : NetworkBehaviour, IDataPersistence
         if (!IsServer) return; //Only server handles load distribution
         
         //Sync shared variables before loading
-        SyncInkSharedVars(gameData);
+        SyncInkSharedVarsInGameData(gameData);
         
-        //For each of the collections if ink variables, send it to each client in an InkNSerializable array
+        //For each of the connected clients, look up their client id in gamedata for ink variables
         foreach (ulong clientId in NetworkManager.Singleton.ConnectedClientsIds)
         {
             string clientIdStr = clientId.ToString();
@@ -251,57 +250,69 @@ public class DialogueManager : NetworkBehaviour, IDataPersistence
                 continue;
             }
             
-            ClientsInkVariableSaveDataCollection collection = gameData.allClientsInkVariableSaveDataCollections[clientIdStr];
-            
-            //Convert InkVariableSaveData to InkNSerializableVariable
-            //Then send it to the associated client through RPC
-            InkNSerializableVariable[] serializableVariables = new InkNSerializableVariable[collection.inkVariables.Count];
-            int i = 0;
-            
-            foreach (var varKvp in collection.inkVariables)
-            {
-                InkNSerializableVariable entry = new InkNSerializableVariable()
-                {
-                    name = varKvp.Key,
-                    stringValue = string.Empty //Initialize to prevent null
-                };
-                
-                switch (varKvp.Value.type)
-                {
-                    case "int":
-                        entry.type = 0;
-                        entry.intValue = varKvp.Value.intValue;
-                        break;
-                    case "float":
-                        entry.type = 1;
-                        entry.floatValue = varKvp.Value.floatValue;
-                        break;
-                    case "bool":
-                        entry.type = 2;
-                        entry.boolValue = varKvp.Value.boolValue;
-                        break;
-                    case "string":
-                        entry.type = 3;
-                        entry.stringValue = varKvp.Value.stringValue ?? string.Empty; //Handle null strings
-                        break;
-                }
-                
-                serializableVariables[i] = entry;
-                i++;
-            }
-            
-            //Send to the appropriate client
-            RpcParams rpcParams = new RpcParams
-            {
-                Send = new RpcSendParams
-                {
-                    Target = RpcTarget.Single(clientId, RpcTargetUse.Temp)
-                }
-            };
-            LoadInkVariablesClientRpc(serializableVariables, rpcParams);
+            LoadDataForClient(clientId, gameData);
         }
     }
 
+    //Finds a clientId's saved Ink Variables in GameData. then sends it to the associated client through RPC
+    //Pre: clientId is a key in GameData's ink vars
+    public void LoadDataForClient(ulong clientId, GameData gameData)
+    {
+        if (!gameData.allClientsInkVariableSaveDataCollections.ContainsKey(clientId.ToString()))
+        {
+            // The client didn't have any saved data
+            return;
+        }
+        
+        ClientsInkVariableSaveDataCollection clientsSavedInkVars = gameData.allClientsInkVariableSaveDataCollections[clientId.ToString()];
+        
+        //Convert InkVariableSaveData to InkNSerializableVariable
+        InkNSerializableVariable[] serializableVariables = new InkNSerializableVariable[clientsSavedInkVars.inkVariables.Count];
+        int i = 0;
+        
+        foreach (var varKvp in clientsSavedInkVars.inkVariables)
+        {
+            InkNSerializableVariable entry = new InkNSerializableVariable()
+            {
+                name = varKvp.Key,
+                stringValue = string.Empty //Initialize to prevent null
+            };
+            
+            switch (varKvp.Value.type)
+            {
+                case "int":
+                    entry.type = 0;
+                    entry.intValue = varKvp.Value.intValue;
+                    break;
+                case "float":
+                    entry.type = 1;
+                    entry.floatValue = varKvp.Value.floatValue;
+                    break;
+                case "bool":
+                    entry.type = 2;
+                    entry.boolValue = varKvp.Value.boolValue;
+                    break;
+                case "string":
+                    entry.type = 3;
+                    entry.stringValue = varKvp.Value.stringValue ?? string.Empty; //Handle null strings
+                    break;
+            }
+            
+            serializableVariables[i] = entry;
+            i++;
+        }
+        
+        //Send to the appropriate client
+        RpcParams rpcParams = new RpcParams
+        {
+            Send = new RpcSendParams
+            {
+                Target = RpcTarget.Single(clientId, RpcTargetUse.Temp)
+            }
+        };
+        LoadInkVariablesClientRpc(serializableVariables, rpcParams);
+    }
+    
     //called by the DPM. Begins the process of collecting variables from all clients
     public void SaveData(ref GameData gameData)
     {
@@ -387,11 +398,11 @@ public class DialogueManager : NetworkBehaviour, IDataPersistence
         
         //Notify DPM that we're done
         onFinishedSaving?.Invoke();
-        Debug.Log("DM announced its done saving");
+        // Debug.Log("DM announced its done saving");
     }
     
     //In given gameData, set all client's shared ink variables equal to the server's version
-    private void SyncInkSharedVars(GameData gameData)
+    private void SyncInkSharedVarsInGameData(GameData gameData)
     {
         if (!gameData.allClientsInkVariableSaveDataCollections.ContainsKey("0"))
         {
@@ -446,7 +457,7 @@ public class DialogueManager : NetworkBehaviour, IDataPersistence
     [Rpc(SendTo.ClientsAndHost)]
     private void RequestInkVariablesForSaveClientRpc()
     {
-        InkNSerializableVariable[] entries = myInkVariablesWrapper.ToNSerializableArray();
+        InkNSerializableVariable[] entries = myInkVariablesWrapper.InkVarsToNSerializableArray();
         SendInkVariablesToServerServerRpc(entries);
     }
     
@@ -457,7 +468,7 @@ public class DialogueManager : NetworkBehaviour, IDataPersistence
     {
         ulong senderClientId = rpcParams.Receive.SenderClientId;
         pendingClientInkVariables[senderClientId] = entries;
-        Debug.Log($"Dialgoue manager received {entries.Length} ink variables from client {senderClientId} to put into pendingClientInkVariables");
+        // Debug.Log($"Dialgoue manager received {entries.Length} ink variables from client {senderClientId} to put into pendingClientInkVariables");
     }
     
     
@@ -466,8 +477,8 @@ public class DialogueManager : NetworkBehaviour, IDataPersistence
     [Rpc(SendTo.SpecifiedInParams)]
     private void LoadInkVariablesClientRpc(InkNSerializableVariable[] entries, RpcParams rpcParams)
     {
-        myInkVariablesWrapper.FromNSerializableArray(entries);
-        Debug.Log($"Loaded {entries.Length} ink variables on client {NetworkManager.Singleton.LocalClientId}");
+        myInkVariablesWrapper.SetVarsFromNSerializableArray(entries);
+        // Debug.Log($"Loaded {entries.Length} ink variables on client {NetworkManager.Singleton.LocalClientId}");
     }
 
     [Rpc(SendTo.SpecifiedInParams)]

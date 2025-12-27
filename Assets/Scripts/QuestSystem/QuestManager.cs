@@ -277,7 +277,7 @@ public class QuestManager : NetworkBehaviour, IDataPersistence
     [Rpc(SendTo.ClientsAndHost)]
     private void InvokeQuestStateChangeEventOnGivenClientRpc(int clientIdToInvokeEvent, string questId, QuestState newQuestState) {
         if ((int)NetworkManager.Singleton.LocalClientId == clientIdToInvokeEvent) {
-            Debug.Log("Invoking quest state change event for quest: " + questId + " to state: " + newQuestState + " on client: " + clientIdToInvokeEvent);
+            // Debug.Log("Invoking quest state change event for quest: " + questId + " to state: " + newQuestState + " on client: " + clientIdToInvokeEvent);
             GameEventsManager.Instance.questEvents.InvokeQuestStateChange(this, questId, newQuestState);
         }
     }

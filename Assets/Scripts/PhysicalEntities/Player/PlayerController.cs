@@ -63,16 +63,8 @@ public class PlayerController : NetworkBehaviour, IDataPersistence {
         //stores the default position of the player (asssigned in editor I think by Network Manager)
         defaultPosition = transform.position;
 
-        //server checks if the DPM has initialized game data
         if (IsServer) {
-            if (DataPersistenceManager.Instance.HasAnUpdatedGameData()) {
-                //if DPM has an updated state of game data
-                InitializeFromDataPersistenceManager();
-            } else {
-                //if DPM doesn't have an updated state of game data
-                SetDefaultValues();
-            }
-            playerIndex.Value = (int)OwnerClientId;
+            playerIndex.Value = (int)OwnerClientId; //For other script's reference
         }
 
         //all users subscribe to selected hotbar slot changes to refresh the equipped item
@@ -121,14 +113,6 @@ public class PlayerController : NetworkBehaviour, IDataPersistence {
             myPlayerInputActions.Player.BingoBongo.performed -= BingoBongo_performed;
 
             myPlayerInputActions.Dispose();
-        }
-    }
-
-    //Asks DPM to load call LoadData() on player, while passsing the saved GameData reference
-    private void InitializeFromDataPersistenceManager() {
-        // Request player data from DPM so that we can load it
-        if (IsServer && DataPersistenceManager.Instance != null) {
-            DataPersistenceManager.Instance.LoadPlayerData(this);
         }
     }
 
@@ -266,11 +250,6 @@ public class PlayerController : NetworkBehaviour, IDataPersistence {
             return;
         }
         EquipItem(hotbarStateStorer.GetSelectedIndexItemSO());
-    }
-
-    //helper method: detect interactable objects on mouse position using raycasting
-    private void DetectInteractableObject() {
-
     }
 
     //on FixedUpdate we read from the input system and move the player accordingly

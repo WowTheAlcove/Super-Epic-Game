@@ -22,7 +22,7 @@ public class DataPersistenceManager : NetworkBehaviour {
 
     // Loading state management
     private bool isLoading = false;
-    private HashSet<ulong> clientsReadyForGameplay = new HashSet<ulong>();
+    private HashSet<ulong> clientsDoneWithLoading = new HashSet<ulong>();
     private float originalTimeScale = 1f;
     private SimulationMode originalPhysicsMode;
     private SimulationMode2D originalPhysics2DMode;
@@ -54,14 +54,26 @@ public class DataPersistenceManager : NetworkBehaviour {
 
     }
 
-    #region OnNetworkSpawn() auto save
+    #region OnNetworkSpawn() ========== auto save and initialization ==========
     public override void OnNetworkSpawn() {
         base.OnNetworkSpawn();
 
         if (IsServer) {
             StartCoroutine(WaitForAllNetworkObjectsToSpawn());
+            NetworkManager.Singleton.OnConnectionEvent += NetworkManager_OnConnectionEvent;
         }
     }
+
+
+    public override void OnNetworkDespawn()
+    {
+        base.OnNetworkDespawn();
+        if (IsServer)
+        {
+            NetworkManager.Singleton.OnConnectionEvent -= NetworkManager_OnConnectionEvent;
+        }
+    }
+
 
     private IEnumerator WaitForAllNetworkObjectsToSpawn() {
         float timeout = 30f; // Prevent infinite waiting
@@ -101,24 +113,7 @@ public class DataPersistenceManager : NetworkBehaviour {
 
     #endregion
 
-
-    private void OnApplicationQuit() {
-        //No auto save for now as I think it causes a save state w/o player prefabs
-        //SaveGame();
-    }
-
-    //deletes dynamic prefabs, and pushes default values for GameData() (mostly empty lists)
-    //DEPRECATED
-    public void ResetGame() {
-        if (!IsServer) {
-            //this command can only be run on the server
-            Debug.LogWarning("ResetGame() didn't go through: can only be run on the server");
-            return;
-        }
-
-        LoadGame(SaveFileType.Auto);
-    }
-
+    #region =========== Load Game ==========
     //pauses game, clears and respawns dynamic prefabs, pushes loaded data to all scripts using IDataPersistence
     public void LoadGame(SaveFileType saveFileType) {
         if (!IsServer) {
@@ -129,7 +124,7 @@ public class DataPersistenceManager : NetworkBehaviour {
 
         // Start loading state - this pauses the game
         SetLoadingStateRpc(true);
-        clientsReadyForGameplay.Clear();
+        clientsDoneWithLoading.Clear();
 
         //load any saved data from file using data handler
         this.currentGameData = dataHandler.Load(saveFileType);
@@ -151,8 +146,8 @@ public class DataPersistenceManager : NetworkBehaviour {
         }
     }
 
-    [Rpc(SendTo.Server)]
     //method to be called by clients player controllers when they have loaded their position
+    [Rpc(SendTo.Server)]
     public void ClientLoadedPositionRpc(ulong clientId, Vector3 clientReportedPosition) {
         if (!isLoading) {
             //we only care about this if this player position is being set during a loading state
@@ -164,7 +159,8 @@ public class DataPersistenceManager : NetworkBehaviour {
         StartCoroutine(VerifyClientPosition(clientId, clientReportedPosition));
     }
 
-    //ran on server, waits until the position the client said they loaded to matches the server's position for that player, then adds them to the ready client list
+    //Pre: A client claims to have loaded its position on their end
+    //Server waits until the position the client said they loaded to matches the server's position for that player, then adds them to the ready client list
     private IEnumerator VerifyClientPosition(ulong clientId, Vector3 clientReportedPosition) {
         //Debug.Log("Verifying position for client " + clientId);
         PlayerController playerControllerOfClient = FindPlayerControllerByClientId(clientId);
@@ -186,10 +182,10 @@ public class DataPersistenceManager : NetworkBehaviour {
 
             if (distance <= positionTolerance) {
                 // Positions match! Client is ready
-                clientsReadyForGameplay.Add(clientId);
+                clientsDoneWithLoading.Add(clientId);
                 //Debug.Log($"Client {clientId} position verified and ready. {clientsReadyForGameplay.Count}/{NetworkManager.Singleton.ConnectedClients.Count} clients ready.");
 
-                CheckAllClientsReady();
+                CheckAllClientsDoneLoading();
                 yield break;
             }
 
@@ -199,10 +195,65 @@ public class DataPersistenceManager : NetworkBehaviour {
 
         // Timeout - position never synced properly
         Debug.LogError($"Client {clientId} position verification timed out. Accepting anyway.");
-        clientsReadyForGameplay.Add(clientId);
-        CheckAllClientsReady();
+        clientsDoneWithLoading.Add(clientId);
+        CheckAllClientsDoneLoading();
+    }
+    
+    //Pre: A client has been added to the list of clients done loading
+    //unpauses if all clients are ready
+    private void CheckAllClientsDoneLoading() {
+        if (isLoading && clientsDoneWithLoading.Count >= NetworkManager.Singleton.ConnectedClients.Count) {
+            //Debug.Log("All clients ready - resuming gameplay");
+            clientsDoneWithLoading.Clear();
+            SetLoadingStateRpc(false);
+        }
+    }
+    
+    private void ClearExistingDynamicPrefabs() {
+        dynamicPrefabStorers = FindAllDynamicPrefabStorers();
+        foreach (DynamicPrefabStorer oldPrefab in dynamicPrefabStorers) {
+            NetworkObject oldPrefabNORef = oldPrefab.GetComponent<NetworkObject>();
+            if (oldPrefabNORef == null) {
+                //if the prefab instance did not have a NetworkObject component
+                Debug.LogError($"There existed a dynamic prefab: " + oldPrefab.name + " with no Network Object component");
+            } else {
+                //if the prefab instance did have a NetworkObject component
+                oldPrefabNORef.Despawn(true);
+            }
+        }
     }
 
+    private void RespawnSaveStateOfDynamicPrefabs(GameData gameDataToRespawnFrom) {
+
+        //respawn each prefab, and give it whatever GUID it was dynamically assigned in the previous save state
+        foreach (KeyValuePair<string, string> prefabAndID in currentGameData.allDynamicPrefabs) {
+            GameObject prefabToReinstantiate = dynamicPrefabDatabase.GetPrefabFromID(prefabAndID.Value);
+
+            if (prefabToReinstantiate == null) {
+                //if it can't find the prefab associated with the prefab ID
+                Debug.LogError("Could not find id: " + prefabAndID.Value + " in prefabDatabase");
+                continue;
+            }
+            DynamicPrefabStorer reinstantiatedObject = Instantiate(prefabToReinstantiate).GetComponent<DynamicPrefabStorer>();
+            if (reinstantiatedObject == null) {
+                //if it can't find the dynamic prefab storer on the instantiated dynamic prefab
+                Debug.LogError($"The id: {prefabAndID.Value} instantiated an object with no DynamicPrefabStorer");
+                continue;
+            }
+            reinstantiatedObject.TryGetComponent<NetworkObject>(out NetworkObject reinstantiatedObjectNORef);
+            if (reinstantiatedObjectNORef == null) {
+                //if the dynamic prefab does not have a NO component
+                Debug.LogError($"The id: {prefabAndID.Value} instantiated an object with no NetworkObject component");
+                continue;
+            }
+
+            reinstantiatedObjectNORef.Spawn();
+            reinstantiatedObject.SetUniqueID(prefabAndID.Key);
+        }
+    }
+    #endregion
+
+    #region ====== Save Game =======
     public void SaveGame(SaveFileType saveFileType) {
         if (!IsServer) {
             //this command can only be run on the server
@@ -298,6 +349,7 @@ public class DataPersistenceManager : NetworkBehaviour {
             //Debug.Log("Game resumed after loading.");
         }
     }
+    #endregion
 
     //finds the player controller belonging to given client ID
     private PlayerController FindPlayerControllerByClientId(ulong clientId) {
@@ -313,15 +365,7 @@ public class DataPersistenceManager : NetworkBehaviour {
         return null;
     }
 
-    //unpauses if all clients are ready
-    private void CheckAllClientsReady() {
-        if (isLoading && clientsReadyForGameplay.Count >= NetworkManager.Singleton.ConnectedClients.Count) {
-            //Debug.Log("All clients ready - resuming gameplay");
-            clientsReadyForGameplay.Clear();
-            SetLoadingStateRpc(false);
-        }
-    }
-
+    //Calls a PlayerController script's LoadData()
     public void LoadPlayerData(PlayerController player) {
         if (currentGameData == null) {
             Debug.LogWarning("No game data available to load player data from");
@@ -365,47 +409,25 @@ public class DataPersistenceManager : NetworkBehaviour {
     public bool HasAnUpdatedGameData() {
         return currentGameData != null;
     }
-
-    private void ClearExistingDynamicPrefabs() {
-        dynamicPrefabStorers = FindAllDynamicPrefabStorers();
-        foreach (DynamicPrefabStorer oldPrefab in dynamicPrefabStorers) {
-            NetworkObject oldPrefabNORef = oldPrefab.GetComponent<NetworkObject>();
-            if (oldPrefabNORef == null) {
-                //if the prefab instance did not have a NetworkObject component
-                Debug.LogError($"There existed a dynamic prefab: " + oldPrefab.name + " with no Network Object component");
-            } else {
-                //if the prefab instance did have a NetworkObject component
-                oldPrefabNORef.Despawn(true);
-            }
+    
+    //When a client loads, load all the data it needs 
+    //Automatically only runs on server
+    private void NetworkManager_OnConnectionEvent(NetworkManager NetworkManager, ConnectionEventData connectionEventData)
+    {
+        if (connectionEventData.EventType == ConnectionEvent.ClientDisconnected ||
+                connectionEventData.EventType == ConnectionEvent.PeerDisconnected)//If this event was from someone disconnecting
+        {
+            return;
         }
-    }
-
-    private void RespawnSaveStateOfDynamicPrefabs(GameData gameDataToRespawnFrom) {
-
-        //respawn each prefab, and give it whatever GUID it was dynamically assigned in the previous save state
-        foreach (KeyValuePair<string, string> prefabAndID in currentGameData.allDynamicPrefabs) {
-            GameObject prefabToReinstantiate = dynamicPrefabDatabase.GetPrefabFromID(prefabAndID.Value);
-
-            if (prefabToReinstantiate == null) {
-                //if it can't find the prefab associated with the prefab ID
-                Debug.LogError("Could not find id: " + prefabAndID.Value + " in prefabDatabase");
-                continue;
-            }
-            DynamicPrefabStorer reinstantiatedObject = Instantiate(prefabToReinstantiate).GetComponent<DynamicPrefabStorer>();
-            if (reinstantiatedObject == null) {
-                //if it can't find the dynamic prefab storer on the instantiated dynamic prefab
-                Debug.LogError($"The id: {prefabAndID.Value} instantiated an object with no DynamicPrefabStorer");
-                continue;
-            }
-            reinstantiatedObject.TryGetComponent<NetworkObject>(out NetworkObject reinstantiatedObjectNORef);
-            if (reinstantiatedObjectNORef == null) {
-                //if the dynamic prefab does not have a NO component
-                Debug.LogError($"The id: {prefabAndID.Value} instantiated an object with no NetworkObject component");
-                continue;
-            }
-
-            reinstantiatedObjectNORef.Spawn();
-            reinstantiatedObject.SetUniqueID(prefabAndID.Key);
+        if (currentGameData == null) //If the game hasn't even loaded or anything yet
+        {
+            return;
         }
+        ulong connectedClientId = connectionEventData.ClientId;
+        FindPlayerControllerByClientId(connectedClientId).LoadData(currentGameData); //Load the PlayerController's data
+        
+        DialogueManager dialogueManager = FindAnyObjectByType<DialogueManager>();
+        dialogueManager.LoadDataForClient(connectedClientId, currentGameData);
     }
+    
 }
