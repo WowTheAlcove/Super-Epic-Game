@@ -49,7 +49,7 @@ public class ItemPopupUI : MonoBehaviour
 
     private IEnumerator FadeOutAndDestroy(GameObject popup)
     {
-        yield return new WaitForSeconds(popupDuration);
+        yield return new WaitForSecondsRealtime(popupDuration);
         if (popup == null) {
             //if the popup was destroyed before it's wait duration ended
             yield break;

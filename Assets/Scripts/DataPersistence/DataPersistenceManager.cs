@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -21,18 +22,19 @@ public class DataPersistenceManager : NetworkBehaviour {
     [SerializeField] private PrefabDatabase dynamicPrefabDatabase;
 
     // Loading state management
-    private bool isLoading = false;
+    private bool isSavingOrLoading = false;
     private HashSet<ulong> clientsDoneWithLoading = new HashSet<ulong>();
     private float originalTimeScale = 1f;
     private SimulationMode originalPhysicsMode;
     private SimulationMode2D originalPhysics2DMode;
 
 
-    private GameData currentGameData; //this needs to be stored outside of methods so that players can join and get their data loaded
+    private GameData currentGameData; //this needs to be stored outside of methods so that players can join and get their data loaded 
     private FileDataHandler dataHandler;
 
     private List<IDataPersistence> dataPersistenceObjects;
     private List<DynamicPrefabStorer> dynamicPrefabStorers;
+    private readonly List<Action<GameData>> removeIdHandlers = new();
 
 
     private void Awake() {
@@ -54,12 +56,13 @@ public class DataPersistenceManager : NetworkBehaviour {
 
     }
 
-    #region OnNetworkSpawn() ========== auto save and initialization ==========
+    #region OnNetworkSpawn() ========== Auto save and Initialization ==========
     public override void OnNetworkSpawn() {
         base.OnNetworkSpawn();
 
         if (IsServer) {
-            StartCoroutine(WaitForAllNetworkObjectsToSpawn());
+            currentGameData = new GameData();
+            StartCoroutine(AutoSaveWhenAllNOsSpawned());
             NetworkManager.Singleton.OnConnectionEvent += NetworkManager_OnConnectionEvent;
         }
     }
@@ -75,7 +78,7 @@ public class DataPersistenceManager : NetworkBehaviour {
     }
 
 
-    private IEnumerator WaitForAllNetworkObjectsToSpawn() {
+    private IEnumerator AutoSaveWhenAllNOsSpawned() {
         float timeout = 30f; // Prevent infinite waiting
         float elapsed = 0f;
 
@@ -102,7 +105,7 @@ public class DataPersistenceManager : NetworkBehaviour {
             }
 
             // Wait a bit before checking again
-            yield return new WaitForSeconds(0.1f);
+            yield return new WaitForSecondsRealtime(0.1f);
             elapsed += 0.1f;
         }
 
@@ -122,8 +125,13 @@ public class DataPersistenceManager : NetworkBehaviour {
             return;
         }
 
+        if (isSavingOrLoading) //should not try to load if it's already loading
+        {
+            return;
+        }
+
         // Start loading state - this pauses the game
-        SetLoadingStateRpc(true);
+        EnterSavingOrLoadingStateRpc();
         clientsDoneWithLoading.Clear();
 
         //load any saved data from file using data handler
@@ -136,7 +144,7 @@ public class DataPersistenceManager : NetworkBehaviour {
         }
 
         ClearExistingDynamicPrefabs();
-        RespawnSaveStateOfDynamicPrefabs(currentGameData);
+        RespawnSaveStateOfDynamicPrefabs();
 
         //push loaded data to all scripts in the game that use that data
         this.dataPersistenceObjects = FindAllDataPersistenceObjects();
@@ -149,7 +157,7 @@ public class DataPersistenceManager : NetworkBehaviour {
     //method to be called by clients player controllers when they have loaded their position
     [Rpc(SendTo.Server)]
     public void ClientLoadedPositionRpc(ulong clientId, Vector3 clientReportedPosition) {
-        if (!isLoading) {
+        if (!isSavingOrLoading) {
             //we only care about this if this player position is being set during a loading state
             return;
         }
@@ -202,10 +210,10 @@ public class DataPersistenceManager : NetworkBehaviour {
     //Pre: A client has been added to the list of clients done loading
     //unpauses if all clients are ready
     private void CheckAllClientsDoneLoading() {
-        if (isLoading && clientsDoneWithLoading.Count >= NetworkManager.Singleton.ConnectedClients.Count) {
+        if (isSavingOrLoading && clientsDoneWithLoading.Count >= NetworkManager.Singleton.ConnectedClients.Count) {
             //Debug.Log("All clients ready - resuming gameplay");
             clientsDoneWithLoading.Clear();
-            SetLoadingStateRpc(false);
+            LeaveSavingOrLoadingStateRpc();
         }
     }
     
@@ -223,7 +231,7 @@ public class DataPersistenceManager : NetworkBehaviour {
         }
     }
 
-    private void RespawnSaveStateOfDynamicPrefabs(GameData gameDataToRespawnFrom) {
+    private void RespawnSaveStateOfDynamicPrefabs() {
 
         //respawn each prefab, and give it whatever GUID it was dynamically assigned in the previous save state
         foreach (KeyValuePair<string, string> prefabAndID in currentGameData.allDynamicPrefabs) {
@@ -262,19 +270,19 @@ public class DataPersistenceManager : NetworkBehaviour {
 
             return;
         }
-
-        if (isLoading)
+        
+        if (isSavingOrLoading)
         {
             Debug.LogWarning("SaveGame() was called while still in a previous loading state. Cancelling...");
             return;
         }
-        
-        currentGameData = new GameData();
+
+        EnterSavingOrLoadingStateRpc();
         
         //find all dynamic prefab storers and save their prefabID and GUID
         this.dynamicPrefabStorers = FindAllDynamicPrefabStorers();
         foreach (DynamicPrefabStorer dynamicPrefabStorer in this.dynamicPrefabStorers) {
-            currentGameData.allDynamicPrefabs.Add(dynamicPrefabStorer.GetUniqueID(), dynamicPrefabStorer.GetPrefabID());
+            currentGameData.allDynamicPrefabs[dynamicPrefabStorer.GetUniqueID()] = dynamicPrefabStorer.GetPrefabID();
         }
         
         //take data from all scripts using IDataPersistent and save it
@@ -293,6 +301,7 @@ public class DataPersistenceManager : NetworkBehaviour {
         {
             //takes the gamedata object and saves it, serializing it in the filedatahandler's method
             dataHandler.Save(currentGameData, saveFileType);
+            LeaveSavingOrLoadingStateRpc();
         }
 
     }
@@ -301,21 +310,19 @@ public class DataPersistenceManager : NetworkBehaviour {
     //Save game data with dataHandler
     private IEnumerator SaveGameAfterDialogueSaved(SaveFileType saveFileType, DialogueManager dialogueManager)
     {
-        //Register callback so DialogueManager can notify us when done
-        // bool dialogueSaveComplete = false;
-        // dialogueManager.RegisterSaveCompleteCallback(() => { dialogueSaveComplete = true; });
-    
         //Wait for DialogueManager to finish (it will set the flag when done)
-        float timeout = 15f;
+        float timeout = 5f;
         float elapsed = 0f;
     
         while (dialogueManager.IsSaving() && elapsed < timeout)
         {
-            Debug.Log("Waiting for dialogue to finish saving so DPM can save");
-            yield return new WaitForSeconds(0.1f);
+            // Debug.Log("Waiting for dialogue to finish saving so DPM can save");
+            yield return new WaitForSecondsRealtime(0.1f);
             elapsed += 0.1f;
         }
     
+        // Debug.Log("done w/ the while loop");
+        
         if (dialogueManager.IsSaving())
         {
             Debug.LogWarning("Timeout waiting for DialogueManager save to complete. Saving anyway.");
@@ -323,33 +330,53 @@ public class DataPersistenceManager : NetworkBehaviour {
 
         //takes the gamedata object and saves it, serializing it in the filedatahandler's method
         dataHandler.Save(currentGameData, saveFileType);
+        LeaveSavingOrLoadingStateRpc();
     }
 
-    // Method to set loading state and pause/resume gameplay
-    [Rpc(SendTo.ClientsAndHost)]
-    private void SetLoadingStateRpc(bool loading) {
-        if (isLoading == loading) return; // Prevent redundant calls
-
-        isLoading = loading;
-
-        if (loading) {
-            originalTimeScale = Time.timeScale;
-
-            Time.timeScale = 0f;
-            Physics.simulationMode = SimulationMode.Script;
-            Physics2D.simulationMode = SimulationMode2D.Script;
-
-            //Debug.Log("Game paused for loading...");
-        } else {
-            // Resume gameplay systems
-            Time.timeScale = originalTimeScale;
-            Physics.simulationMode = originalPhysicsMode;
-            Physics2D.simulationMode = originalPhysics2DMode;
-
-            //Debug.Log("Game resumed after loading.");
-        }
-    }
     #endregion
+    
+    //Pre: Saving/loading has begun
+    //Pause all clients for saving/loading
+    [Rpc(SendTo.ClientsAndHost)]
+    private void EnterSavingOrLoadingStateRpc()
+    {
+        if (isSavingOrLoading == true) //prevent redundant calls
+        {
+            return;
+        }
+        this.isSavingOrLoading = true;
+        
+        
+        FindPlayerControllerByClientId(NetworkManager.Singleton.LocalClientId).DisableInput();
+        
+        originalTimeScale = Time.timeScale;
+        Time.timeScale = 0f;
+        Physics.simulationMode = SimulationMode.Script;
+        Physics2D.simulationMode = SimulationMode2D.Script;
+
+        //Debug.Log("Game paused for loading...");
+    }
+    
+    //Pre: Saving/Loading has concluded
+    //Unpause all clients
+    [Rpc(SendTo.ClientsAndHost)]
+    private void LeaveSavingOrLoadingStateRpc()
+    {
+        if (isSavingOrLoading == false) //prevent redundant calls
+        {
+            return;
+        }
+        
+        FindPlayerControllerByClientId(NetworkManager.Singleton.LocalClientId).EnableInput();
+
+        this.isSavingOrLoading = false;
+        
+        Time.timeScale = originalTimeScale;
+        Physics.simulationMode = originalPhysicsMode;
+        Physics2D.simulationMode = originalPhysics2DMode;
+
+        //Debug.Log("Game resumed after loading.");
+    }
 
     //finds the player controller belonging to given client ID
     private PlayerController FindPlayerControllerByClientId(ulong clientId) {
@@ -363,17 +390,6 @@ public class DataPersistenceManager : NetworkBehaviour {
         }
 
         return null;
-    }
-
-    //Calls a PlayerController script's LoadData()
-    public void LoadPlayerData(PlayerController player) {
-        if (currentGameData == null) {
-            Debug.LogWarning("No game data available to load player data from");
-            return;
-        }
-
-        // Load the player's specific data
-        player.LoadData(currentGameData);
     }
 
     private List<IDataPersistence> FindAllDataPersistenceObjects() {
@@ -390,6 +406,36 @@ public class DataPersistenceManager : NetworkBehaviour {
         return new List<DynamicPrefabStorer>(dataPersistenceObjects);
     }
 
+    //Public Method to be called by a script that wants to remove its SaveId
+    public void RemoveSaveId(string id)
+    {
+        if (!IsServer)
+        {
+            Debug.LogWarning("RemoveSaveId tried to be called on non server");
+            return;
+        }
+    
+        if (currentGameData == null)
+        {
+            Debug.LogError("Cannot remove ID: currentGameData is null");
+            return;
+        }
+    
+        // Remove from all dictionaries
+        currentGameData.kickablePotPositions.Remove(id);
+        currentGameData.allInventoriesData.Remove(id);
+        currentGameData.allSavedPositions.Remove(id);
+        currentGameData.allSavedActivenesses.Remove(id);
+        currentGameData.allDynamicPrefabs.Remove(id);
+        currentGameData.allPlayerData.Remove(id);
+        currentGameData.allQuestData.Remove(id);
+        currentGameData.allQuestStepData.Remove(id);
+        currentGameData.allClientsInkVariableSaveDataCollections.Remove(id);
+    
+        // Debug.Log($"Removed ID '{id}' from all GameData dictionaries");
+    }
+
+
     public ItemDatabase GetItemDatabase() {
         return itemDatabase;
     }
@@ -403,11 +449,6 @@ public class DataPersistenceManager : NetworkBehaviour {
             }
         }
         return matchingItem;
-    }
-
-    // returns whether or not the DPM has any game data loaded or saved
-    public bool HasAnUpdatedGameData() {
-        return currentGameData != null;
     }
     
     //When a client loads, load all the data it needs 

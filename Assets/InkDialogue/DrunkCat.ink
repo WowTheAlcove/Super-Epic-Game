@@ -62,4 +62,5 @@ Wow? Really?
     It's nice to know someone who can finally relate to my struggle
     :)
     ~FinishQuest("Drink3PotionsQuest")
+    ~Drink3PotionsQuestState = "FINISHED"
 -> DrunkCatHub

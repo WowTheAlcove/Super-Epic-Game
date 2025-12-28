@@ -25,4 +25,10 @@ public class MiscEvents
         OnBingoBongoChanged?.Invoke(sender, new BingoBongoChangedEventArgs { newBingoBongoCount = newCount });
     }
 
+    public event EventHandler<EventArgs> OnPotBroken;
+
+    public void InvokeOnPotBroken(object sender)
+    {
+        OnPotBroken?.Invoke(sender, EventArgs.Empty);
+    }
 }

@@ -16,11 +16,19 @@ public class WorldItem : NetworkBehaviour {
 
     public virtual void PickUp() {
 
+        RemoveSaveIdServerRpc();
         this.NetworkObject.Despawn(true);
     }
 
     [Rpc(SendTo.Server)]
     private void SpawnRpc() {
         GetComponent<NetworkObject>().Spawn();
+    }
+
+    [ServerRpc(RequireOwnership = false)]
+    private void RemoveSaveIdServerRpc()
+    {
+        DataPersistenceManager.Instance.RemoveSaveId(GetComponent<SaveID>().Id);
+        Debug.Log("Removing SaveID: " + GetComponent<SaveID>().Id);
     }
 }

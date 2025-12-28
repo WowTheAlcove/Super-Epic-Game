@@ -196,13 +196,15 @@ public class DialogueManager : NetworkBehaviour, IDataPersistence
     }
 
     //binds the quest ink external functions invoke the appropriate quest events
-            //passes the local client id as player index, all dialogue managers are local
+    //passes the local client id as player index, all dialogue managers are local
+    //If the quest is being started or ended, it also updates the Ink variable immediately so that dialogue won't have to wait for RPC
     private void BindQuestEventFunctions()
     {
         myStory.BindExternalFunction("StartQuest", (string questId) => 
         {
             // Debug.Log("binding StartQuest");
-            GameEventsManager.Instance.questEvents.InvokeStartQuest(this, questId, (int)NetworkManager.Singleton.LocalClientId);            
+            GameEventsManager.Instance.questEvents.InvokeStartQuest(this, questId, (int)NetworkManager.Singleton.LocalClientId); 
+            myInkVariablesWrapper.UpdateVariableState(questId + "State", "IN_PROGRESS", myStory);
         });
         myStory.BindExternalFunction("AdvanceQuest", (string questId) =>
         {
@@ -211,6 +213,7 @@ public class DialogueManager : NetworkBehaviour, IDataPersistence
         myStory.BindExternalFunction("FinishQuest", (string questId) =>
         {
             GameEventsManager.Instance.questEvents.InvokeFinishQuest(this, questId, (int)NetworkManager.Singleton.LocalClientId);
+            myInkVariablesWrapper.UpdateVariableState(questId + "State", "FINISHED", myStory);
         });
     }
 
@@ -227,9 +230,6 @@ public class DialogueManager : NetworkBehaviour, IDataPersistence
     public void LoadData(GameData gameData)
     {
         if (!IsServer) return; //Only server handles load distribution
-        
-        //Sync shared variables before loading
-        SyncInkSharedVarsInGameData(gameData);
         
         //For each of the connected clients, look up their client id in gamedata for ink variables
         foreach (ulong clientId in NetworkManager.Singleton.ConnectedClientsIds)
@@ -334,13 +334,13 @@ public class DialogueManager : NetworkBehaviour, IDataPersistence
         RequestInkVariablesForSaveClientRpc();
 
         //Wait for all clients to respond
-        float timeout = 10f;
+        float timeout = 5f;
         float elapsed = 0f;
 
         while (elapsed < timeout &&
                pendingClientInkVariables.Count < NetworkManager.Singleton.ConnectedClientsIds.Count)
         {
-            yield return new WaitForSeconds(0.1f);
+            yield return new WaitForSecondsRealtime(0.1f);
             elapsed += 0.1f;
         }
 
@@ -353,6 +353,7 @@ public class DialogueManager : NetworkBehaviour, IDataPersistence
         SendPendingVariablesToGameData(gameData);
     }
     
+    //Pre: All clients' ink variables should be stored in pendingClientInkVariables (unless timeout)
     //Convert each array in pendingClientInkVariables into InkVariableSaveDataCollection, and give to GameData
     private void SendPendingVariablesToGameData(GameData gameData)
     {
@@ -391,7 +392,7 @@ public class DialogueManager : NetworkBehaviour, IDataPersistence
                 collection.inkVariables.Add(entry.name, saveData);
             }
             
-            gameData.allClientsInkVariableSaveDataCollections.Add(clientIdStr, collection);
+            gameData.allClientsInkVariableSaveDataCollections[clientIdStr] = collection;
         }
         
         isSaving = false;
@@ -399,48 +400,6 @@ public class DialogueManager : NetworkBehaviour, IDataPersistence
         //Notify DPM that we're done
         onFinishedSaving?.Invoke();
         // Debug.Log("DM announced its done saving");
-    }
-    
-    //In given gameData, set all client's shared ink variables equal to the server's version
-    private void SyncInkSharedVarsInGameData(GameData gameData)
-    {
-        if (!gameData.allClientsInkVariableSaveDataCollections.ContainsKey("0"))
-        {
-            Debug.LogWarning("No server ink variables found (client 0), cannot sync shared vars");
-            return;
-        }
-        
-        List<KeyValuePair<string, InkVariableSaveData>> sharedVars = new List<KeyValuePair<string, InkVariableSaveData>>();
-        ClientsInkVariableSaveDataCollection serverCollection = gameData.allClientsInkVariableSaveDataCollections["0"];
-        
-        //Collect all shared variables from server
-        foreach (var kvp in serverCollection.inkVariables)
-        {
-            if (kvp.Key.StartsWith("SharedVar"))
-            {
-                sharedVars.Add(kvp);
-            }
-        }
-        
-        //Apply shared variables to all clients
-        foreach (var clientKvp in gameData.allClientsInkVariableSaveDataCollections)
-        {
-            if (clientKvp.Key == "0") continue; //Skip server
-            
-            foreach (var sharedVar in sharedVars)
-            {
-                if (clientKvp.Value.inkVariables.ContainsKey(sharedVar.Key))
-                {
-                    clientKvp.Value.inkVariables[sharedVar.Key] = sharedVar.Value;
-                }
-            }
-        }
-    }
-    
-    //called by whoever wants to know when the dialogue manager is done saving
-    public void RegisterSaveCompleteCallback(Action callback)
-    {
-        onFinishedSaving = callback;
     }
     
     //method to check if dialogue manager is saving
@@ -477,15 +436,111 @@ public class DialogueManager : NetworkBehaviour, IDataPersistence
     [Rpc(SendTo.SpecifiedInParams)]
     private void LoadInkVariablesClientRpc(InkNSerializableVariable[] entries, RpcParams rpcParams)
     {
+        ExitDialogue();
         myInkVariablesWrapper.SetVarsFromNSerializableArray(entries);
+        RequestSharedVariablesFromServerServerRpc();
         // Debug.Log($"Loaded {entries.Length} ink variables on client {NetworkManager.Singleton.LocalClientId}");
     }
 
     [Rpc(SendTo.SpecifiedInParams)]
     private void ResetInkVariablesClientRpc(RpcParams rpcParams)
     {
+        ExitDialogue();
         myStory.ResetState();
         myInkVariablesWrapper = new InkVariablesWrapper(myStory);
+        RequestSharedVariablesFromServerServerRpc();
+    }
+    
+    //Pre: A client wants to sync its shared variables with the server's instance
+    //Server sends a list of all Ink Variables with "SharedVar" prefix to a client
+    [Rpc(SendTo.Server)]
+    private void RequestSharedVariablesFromServerServerRpc(RpcParams rpcParams = default)
+    {
+        ulong requestingClientId = rpcParams.Receive.SenderClientId;
+        
+        //Get all shared variables from server's story
+        List<InkNSerializableVariable> sharedVars = new List<InkNSerializableVariable>();
+        
+        foreach (string varName in myStory.variablesState)
+        {
+            if (varName.StartsWith("SharedVar"))
+            {
+                object value = myStory.variablesState[varName];
+                InkNSerializableVariable entry = new InkNSerializableVariable()
+                {
+                    name = varName,
+                    stringValue = string.Empty
+                };
+                
+                if (value is int)
+                {
+                    entry.type = 0;
+                    entry.intValue = (int)value;
+                }
+                else if (value is float)
+                {
+                    entry.type = 1;
+                    entry.floatValue = (float)value;
+                }
+                else if (value is bool)
+                {
+                    entry.type = 2;
+                    entry.boolValue = (bool)value;
+                }
+                else if (value is string)
+                {
+                    entry.type = 3;
+                    entry.stringValue = (string)value ?? string.Empty;
+                }
+                
+                sharedVars.Add(entry);
+            }
+        }
+        
+        //Send shared variables to requesting client
+        RpcParams sendParams = new RpcParams
+        {
+            Send = new RpcSendParams
+            {
+                Target = RpcTarget.Single(requestingClientId, RpcTargetUse.Temp)
+            }
+        };
+        
+        SyncSharedVariablesClientRpc(sharedVars.ToArray(), sendParams);
+    }
+    
+    //Client receives and applies shared variables from server
+    [Rpc(SendTo.SpecifiedInParams)]
+    private void SyncSharedVariablesClientRpc(InkNSerializableVariable[] sharedVars, RpcParams rpcParams)
+    {
+        //Apply each shared variable to the client's ink variables wrapper
+        foreach (InkNSerializableVariable entry in sharedVars)
+        {
+            object value = null;
+            
+            switch (entry.type)
+            {
+                case 0:
+                    value = entry.intValue;
+                    break;
+                case 1:
+                    value = entry.floatValue;
+                    break;
+                case 2:
+                    value = entry.boolValue;
+                    break;
+                case 3:
+                    value = entry.stringValue;
+                    break;
+            }
+            
+            if (value != null)
+            {
+                myInkVariablesWrapper.UpdateVariableState(entry.name, value, myStory);
+            }
+        }
+        
+        // Debug.Log($"Synced {sharedVars.Length} shared variables from server on client {NetworkManager.Singleton.LocalClientId}");
     }
     
     #endregion

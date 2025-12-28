@@ -123,15 +123,34 @@ public class QuestManager : NetworkBehaviour, IDataPersistence
                     //if the requirements were marked as not met
 
                     if (CheckRequirementsMet(quest, i)) { //if that quests requirements are actually met
-                        //Debug.Log("Quest requirements met for quest: " + quest.info.id);
-                        ChangeQuestStateForGivenPlayerIndex(i, quest.info.id, QuestState.CAN_START);
+                        // Debug.Log("Quest requirements met for quest: " + quest.info.id);
+                        ChangeQuestStateOnAppropriateClients(i, quest.info.id, QuestState.CAN_START);
                     }
                 } else if (quest.state == QuestState.CAN_START){
                     //if the requirements were marked as met
-
+                    
                     if (!CheckRequirementsMet(quest, i)) {
-                        //Debug.Log("Quest requirements no longer met for quest: " + quest.info.id);
-                        ChangeQuestStateForGivenPlayerIndex(i, quest.info.id, QuestState.REQUIREMENTS_NOT_MET);
+                        if (quest.info.IsShared) //If the quest is shared
+                        {
+                            //If any of the clients are meeting the requirements, do not revert to REQUIREMENTS_NOT_MET
+                            bool anyClientIsMeetingRequirements = false;
+                            for (int j = 0; j < i; j++)
+                            {
+                                if (CheckRequirementsMet(quest, j))
+                                {
+                                    anyClientIsMeetingRequirements = true;
+                                    break;
+                                }
+                            }
+
+                            if (anyClientIsMeetingRequirements)
+                            {
+                                continue;
+                            }
+                        }
+
+                        // Debug.Log("Quest requirements no longer met for quest: " + quest.info.id + " on any client");
+                        ChangeQuestStateOnAppropriateClients(i, quest.info.id, QuestState.REQUIREMENTS_NOT_MET);
                     }
                 }
             }

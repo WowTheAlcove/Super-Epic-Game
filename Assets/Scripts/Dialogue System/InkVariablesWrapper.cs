@@ -6,6 +6,7 @@ public class InkVariablesWrapper
 {
     private Dictionary<string, object> myVariables;
     private Story currentStoryObject;
+    private bool isListeningToInk;
 
     //constructor: creates the dictionary. Key: Ink variable name. Value: Default ink variable value
     public InkVariablesWrapper(Story story)
@@ -24,33 +25,51 @@ public class InkVariablesWrapper
         SyncVariablesToStory(story);
         currentStoryObject = story;
         story.variablesState.variableChangedEvent += UpdateVariableStateFromInk;
+        isListeningToInk = true;
     }
 
     public void StopListening(Story story)
     {
         currentStoryObject = null;
         story.variablesState.variableChangedEvent -= UpdateVariableStateFromInk;
+        isListeningToInk = false;
     }
 
     //updates a given variable in the dictionary with a value
     public void UpdateVariableState(string name, object value, Story story)
     {
-        if (!myVariables.ContainsKey(name)) //only update variables that were initialized
+        if (!myVariables.ContainsKey(name) && !myVariables.ContainsKey("SharedVar" + name)) //only update variables that were initialized
         {
             Debug.LogWarning("Variable " + name + " not found in InkVariableWrapper's dictionary");
             return;
         }
         // Debug.Log("Updating Variable: " + name + " in InkVariableWrapper's dictionary to:  " + value);
 
+        //casting the ink.runtime.object to CLR object
         object clrValue = value;
-        if (value is Ink.Runtime.Value inkValue) //casting the ink.runtime.object to CLR object
+        if (value is Ink.Runtime.Value inkValue)
         {
             clrValue = inkValue.valueObject;
         }
-        
-        myVariables[name] = value;
-        
-        SyncVariablesToStory(story); //keeps Ink variables immediately up to date
+
+        if (myVariables.ContainsKey(name))
+        {
+            myVariables[name] = value;
+        } else if (myVariables.ContainsKey("SharedVar" + name))
+        {
+            myVariables["SharedVar" + name] = value;
+        }
+
+        if (isListeningToInk)
+        {
+            story.variablesState.variableChangedEvent -= UpdateVariableStateFromInk;
+            SyncVariablesToStory(story); //keeps Ink variables immediately up to date
+            story.variablesState.variableChangedEvent += UpdateVariableStateFromInk;
+        }
+        else
+        {
+            SyncVariablesToStory(story); //keeps Ink variables immediately up to date
+        }
     }
     
     //for while the dialogue is playing, lets ink sync to dictionary and pass most recently opened story object
@@ -62,13 +81,14 @@ public class InkVariablesWrapper
             return;
         }
         
+        //casting the ink.runtime.object to CLR object
         object clrValue = value;
-        if (value is Ink.Runtime.Value inkValue) //casting the ink.runtime.object to CLR object
+        if (value is Ink.Runtime.Value inkValue)
         {
             clrValue = inkValue.valueObject;
         }
         
-        Debug.Log("Updating Variable: " + name + " in InkVariableWrapper's dictionary to:  " + value);
+        // Debug.Log("Updating Variable: " + name + " in InkVariableWrapper's dictionary to:  " + value);
 
         myVariables[name] = clrValue;
     }

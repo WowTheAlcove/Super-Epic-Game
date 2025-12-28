@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cb8a7efddec38da4789e12dfe20f491d, type: 3}
+  m_Name: Break5PotsQuest
+  m_EditorClassIdentifier: Assembly-CSharp::QuestInfoSO
+  <id>k__BackingField: Break5PotsQuest
+  IsShared: 1
+  displayName: Break them pots
+  bingoBongoRequirement: 0
+  prerequisiteQuestInfoSos:
+  - {fileID: 11400000, guid: 0d3b085434352dd45a6de37cefc1ae62, type: 2}
+  questStepPrefabs:
+  - {fileID: 3493244691854661980, guid: 412c8a559e036434b854b7cd6a95b490, type: 3}
+  questRewardPrefab: {fileID: 4719903906241758237, guid: a35e6805a6e06174f8e43379147889e1, type: 3}
