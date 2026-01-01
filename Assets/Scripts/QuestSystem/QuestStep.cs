@@ -34,6 +34,8 @@ public abstract class QuestStep : NetworkBehaviour, IDataPersistence
 
             GameEventsManager.Instance.questEvents.InvokeAdvanceQuest(this, questId, playerIndex);
 
+            DataPersistenceManager.Instance.RemoveSaveId(GetComponent<SaveID>().Id);
+            
             this.NetworkObject.Despawn(true);
         }
     }

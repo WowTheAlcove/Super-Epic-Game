@@ -64,7 +64,7 @@ public class InventoryController : NetworkBehaviour, IDataPersistence {
     }
 
     //create a new inventory with empty slots
-    [ServerRpc(RequireOwnership = false)]
+    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
     public void SetInventoryToEmptyServerRpc() {
         if (currentInventory != null) {// If there is already an inventory, clear the current inventory slot visuals
             currentInventory.Clear();
@@ -115,7 +115,7 @@ public class InventoryController : NetworkBehaviour, IDataPersistence {
         return data;
     }
 
-    [ServerRpc(RequireOwnership = false)]
+    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
     public void AddItemToSlotServerRpc(int itemToAdd, int index) {
         if(index < 0 || index >= numOfSlots) {
             Debug.LogError("Index out of bounds when trying to add item to inventory slot: " + index);
@@ -124,7 +124,7 @@ public class InventoryController : NetworkBehaviour, IDataPersistence {
         currentInventory[index] = itemToAdd;
     }
 
-    [ServerRpc(RequireOwnership = false)]
+    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
     public void AddItemToFirstSlotInInventoryServerRpc(int itemToAdd) {
         for(int i = 0; i < numOfSlots; i++) {
             if (currentInventory[i] == -1) {

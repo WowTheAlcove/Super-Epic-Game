@@ -12,19 +12,19 @@ public class KickablePot : NetworkBehaviour, IInteractable
         DespawnSelfServerRpc();
     }
 
-    [ServerRpc(RequireOwnership = false)]
+    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
     private void RemoveSaveIdServerRpc()
     {
         DataPersistenceManager.Instance.RemoveSaveId(GetComponent<SaveID>().Id);
     }
     
-    [ServerRpc(RequireOwnership = false)]
+    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
     private void DespawnSelfServerRpc()
     {
         this.NetworkObject.Despawn(true);
     }
 
-    [ServerRpc(RequireOwnership = false)]
+    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
     private void InvokePotBrokenEventServerRpc()
     {
         GameEventsManager.Instance.miscEvents.InvokeOnPotBroken(this);

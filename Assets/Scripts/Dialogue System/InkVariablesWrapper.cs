@@ -4,7 +4,7 @@ using Ink.Runtime;
 
 public class InkVariablesWrapper
 {
-    private Dictionary<string, object> myVariables;
+    public Dictionary<string, object> myVariables { get; private set; }
     private Story currentStoryObject;
     private bool isListeningToInk;
 

@@ -5,6 +5,7 @@ using UnityEngine.InputSystem;
 using UnityEngine;
 using Ink.Runtime;
 using Unity.Netcode;
+using UnityEngine.Serialization;
 using UnityEngine.U2D.Animation;
 
 public class DialogueManager : NetworkBehaviour, IDataPersistence
@@ -18,11 +19,6 @@ public class DialogueManager : NetworkBehaviour, IDataPersistence
     private PlayerController localPlayer; //for freezing input
     private InkVariablesWrapper myInkVariablesWrapper; //for managing variables
     
-    #region ---- SAVE/LOAD STATE ----
-    private Dictionary<ulong, InkNSerializableVariable[]> pendingClientInkVariables = new Dictionary<ulong, InkNSerializableVariable[]>();
-    private bool isSaving = false;
-    private Action onFinishedSaving; //Callback to notify DPM when done saving
-    #endregion
     
     #region ---- INITIALIZATION ----
     private void Awake()
@@ -186,6 +182,7 @@ public class DialogueManager : NetworkBehaviour, IDataPersistence
     }
     #endregion
     
+    #region ===== BINDING FUNCTIONS ======
     private void DialogueEvents_OnBindInkExternalFunction(object sender, DialogueEvents.BindInkExternalFunctionEventArgs e)
     {
         myStory.BindExternalFunction(e.functionName, e.action);
@@ -223,7 +220,15 @@ public class DialogueManager : NetworkBehaviour, IDataPersistence
         myStory.UnbindExternalFunction("AdvanceQuest");
         myStory.UnbindExternalFunction("FinishQuest");
     }
+    
+    #endregion
 
+    #region ---- TRACKING SAVE/LOAD STATE ----
+    private Dictionary<ulong, InkNSerializableVariable[]> pendingClientInkVariables = new Dictionary<ulong, InkNSerializableVariable[]>();
+    private bool isSaving = false;
+    private Action onFinishedSaving; //Callback to notify DPM when done saving
+    #endregion
+    
     #region ---- SAVE/LOAD DATA ----
     
     //called by DPM, syncs all shared variables, then gives each client's DM 
@@ -461,11 +466,11 @@ public class DialogueManager : NetworkBehaviour, IDataPersistence
         //Get all shared variables from server's story
         List<InkNSerializableVariable> sharedVars = new List<InkNSerializableVariable>();
         
-        foreach (string varName in myStory.variablesState)
+        foreach (string varName in myInkVariablesWrapper.myVariables.Keys)
         {
             if (varName.StartsWith("SharedVar"))
             {
-                object value = myStory.variablesState[varName];
+                object value = myInkVariablesWrapper.myVariables[varName];
                 InkNSerializableVariable entry = new InkNSerializableVariable()
                 {
                     name = varName,
@@ -543,5 +548,57 @@ public class DialogueManager : NetworkBehaviour, IDataPersistence
         // Debug.Log($"Synced {sharedVars.Length} shared variables from server on client {NetworkManager.Singleton.LocalClientId}");
     }
     
+    #endregion
+    
+    #region ===== DEBUGGING =====
+    [FormerlySerializedAs("debugInkVariables")]
+    [Header("Debug (Play Mode)")]
+    [SerializeField] private bool debugActive;
+    [FormerlySerializedAs("debugInkVariableSnapshot")] [SerializeField] private List<InkVariableDebugRow> debugStoryInkVariables = new();
+    [FormerlySerializedAs("debugCInkDictionary")] [SerializeField] private List<InkVariableDebugRow> debugCInkVariableDictionary = new();
+
+    [Serializable]
+    private struct InkVariableDebugRow
+    {
+        public string variableName;
+        public string type;
+        public string value;
+    }
+
+#if UNITY_EDITOR
+    private void LateUpdate()
+    {
+        if (!Application.isPlaying) return;
+        if (!debugActive) return;
+        if (myStory == null) return;
+        if (myInkVariablesWrapper.myVariables == null) return;
+
+        debugStoryInkVariables.Clear();
+        debugCInkVariableDictionary.Clear();
+        
+        foreach (string varName in myStory.variablesState)
+        {
+            object varValue = myStory.variablesState[varName];
+        
+            debugStoryInkVariables.Add(new InkVariableDebugRow
+            {
+                variableName = varName,
+                type = varValue?.GetType().Name ?? "null",
+                value = varValue?.ToString() ?? "null"
+            });
+        }
+        
+        foreach (KeyValuePair<string, object> kvp in myInkVariablesWrapper.myVariables)
+        {
+            object v = kvp.Value;
+            debugCInkVariableDictionary.Add(new InkVariableDebugRow()
+            {
+                variableName = kvp.Key,
+                type = v?.GetType().Name ?? "null",
+                value = v?.ToString() ?? "null"
+            });
+        }
+    }
+#endif
     #endregion
 }

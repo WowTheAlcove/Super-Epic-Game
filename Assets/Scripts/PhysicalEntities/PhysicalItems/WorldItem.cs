@@ -9,26 +9,25 @@ public class WorldItem : NetworkBehaviour {
     public ItemSO MyItemSO => myItemSO; // read only property
 
     private void Start() {
-        if (!IsSpawned) {
+        if (!IsSpawned && NetworkManager.Singleton.IsListening) { //Spawn the item if it needs to be. Do not spawn if the NM isn't started
             SpawnRpc();
         }
     }
 
     public virtual void PickUp() {
-
         RemoveSaveIdServerRpc();
         this.NetworkObject.Despawn(true);
     }
 
     [Rpc(SendTo.Server)]
     private void SpawnRpc() {
-        GetComponent<NetworkObject>().Spawn();
+        this.NetworkObject.Spawn();
     }
 
-    [ServerRpc(RequireOwnership = false)]
+    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
     private void RemoveSaveIdServerRpc()
     {
         DataPersistenceManager.Instance.RemoveSaveId(GetComponent<SaveID>().Id);
-        Debug.Log("Removing SaveID: " + GetComponent<SaveID>().Id);
+        // Debug.Log("Removing SaveID: " + GetComponent<SaveID>().Id);
     }
 }

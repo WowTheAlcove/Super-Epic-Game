@@ -254,7 +254,8 @@ public class DataPersistenceManager : NetworkBehaviour {
                 Debug.LogError($"The id: {prefabAndID.Value} instantiated an object with no NetworkObject component");
                 continue;
             }
-
+            
+            Debug.Log("Spawning NO: " + reinstantiatedObjectNORef.gameObject.name);
             reinstantiatedObjectNORef.Spawn();
             reinstantiatedObject.SetUniqueID(prefabAndID.Key);
         }

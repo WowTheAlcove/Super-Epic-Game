@@ -11,6 +11,13 @@ public class Break5PotsQuestStep : QuestStep
         
     }
 
+    public override void OnDestroy()
+    {
+        base.OnDestroy();
+        GameEventsManager.Instance.miscEvents.OnPotBroken -= MiscEvents_OnPotBroken; 
+        
+    }
+
     private void MiscEvents_OnPotBroken(object sender, EventArgs e)
     {
         amtOfPotsBroken++;
@@ -21,6 +28,7 @@ public class Break5PotsQuestStep : QuestStep
     {
         if (amtOfPotsBroken >= 5)
         {
+            Debug.Log("IsSpawned: " + IsSpawned);
             FinishQuestStep();
         }
     }

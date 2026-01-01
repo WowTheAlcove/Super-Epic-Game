@@ -19,7 +19,7 @@ public class ArthurController : NetworkBehaviour, IInteractable, ICustomInteract
             "ArthurRoot");
     }
 
-    [ServerRpc(RequireOwnership = false)]
+    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
     private void SpawnKickablePotServerRpc() {
         GameObject spawnedKickablePot = Instantiate(kickablePotPrefab, transform.position + Vector3.right * .5f, Quaternion.identity);
         spawnedKickablePot.GetComponent<NetworkObject>().Spawn();

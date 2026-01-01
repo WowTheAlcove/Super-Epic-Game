@@ -15,6 +15,47 @@ public class QuestManager : NetworkBehaviour, IDataPersistence
 
     private List<int> currentBingoBongoCounts;
 
+    #region ===== DEBUG STUFF =====
+    [System.Serializable]
+    private struct QuestDebugRow
+    {
+        public int playerIndex;
+        public string questId;
+        public QuestState state;
+        public int stepIndex;
+    }
+
+    [Header("Debug (Play Mode)")]
+    [SerializeField] private List<QuestDebugRow> debugQuestSnapshot = new();
+
+    [SerializeField] private bool debugActive = false;
+
+#if UNITY_EDITOR
+    private void LateUpdate()
+    {
+        if (!Application.isPlaying) return;
+        if (!debugActive) return;
+
+        debugQuestSnapshot.Clear();
+
+        for (int p = 0; p < playerQuestMaps.Count; p++)
+        {
+            foreach (var kvp in playerQuestMaps[p])
+            {
+                var q = kvp.Value;
+                debugQuestSnapshot.Add(new QuestDebugRow
+                {
+                    playerIndex = p,
+                    questId = kvp.Key,
+                    state = q.state,
+                    stepIndex = q.GetCurrentQuestStepIndex()
+                });
+            }
+        }
+    }
+#endif
+    #endregion
+    
     private void Awake() {
         currentBingoBongoCounts = new List<int>() { 0, 0, 0, 0 };
 
