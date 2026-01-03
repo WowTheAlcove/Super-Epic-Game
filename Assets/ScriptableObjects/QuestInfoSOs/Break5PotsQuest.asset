@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cb8a7efddec38da4789e12dfe20f491d, type: 3}
   m_Name: Break5PotsQuest
   m_EditorClassIdentifier: Assembly-CSharp::QuestInfoSO
-  <id>k__BackingField: Break5PotsQuest
+  <Id>k__BackingField: Break5PotsQuest
   IsShared: 1
   displayName: Break them pots
   bingoBongoRequirement: 0

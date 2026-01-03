@@ -15,47 +15,7 @@ public class QuestManager : NetworkBehaviour, IDataPersistence
 
     private List<int> currentBingoBongoCounts;
 
-    #region ===== DEBUG STUFF =====
-    [System.Serializable]
-    private struct QuestDebugRow
-    {
-        public int playerIndex;
-        public string questId;
-        public QuestState state;
-        public int stepIndex;
-    }
-
-    [Header("Debug (Play Mode)")]
-    [SerializeField] private List<QuestDebugRow> debugQuestSnapshot = new();
-
-    [SerializeField] private bool debugActive = false;
-
-#if UNITY_EDITOR
-    private void LateUpdate()
-    {
-        if (!Application.isPlaying) return;
-        if (!debugActive) return;
-
-        debugQuestSnapshot.Clear();
-
-        for (int p = 0; p < playerQuestMaps.Count; p++)
-        {
-            foreach (var kvp in playerQuestMaps[p])
-            {
-                var q = kvp.Value;
-                debugQuestSnapshot.Add(new QuestDebugRow
-                {
-                    playerIndex = p,
-                    questId = kvp.Key,
-                    state = q.state,
-                    stepIndex = q.GetCurrentQuestStepIndex()
-                });
-            }
-        }
-    }
-#endif
-    #endregion
-    
+    #region ==== INITIALIZATION ====
     private void Awake() {
         currentBingoBongoCounts = new List<int>() { 0, 0, 0, 0 };
 
@@ -69,6 +29,7 @@ public class QuestManager : NetworkBehaviour, IDataPersistence
         GameEventsManager.Instance.questEvents.OnStartQuest += QuestEvents_OnStartQuest;
         GameEventsManager.Instance.questEvents.OnAdvanceQuest += QuestEvents_OnAdvanceQuest;
         GameEventsManager.Instance.questEvents.OnFinishQuest += QuestEvents_OnFinishQuest;
+        GameEventsManager.Instance.questEvents.OnRequestQuestState += QuestEvents_OnRequestQuestState;
 
         GameEventsManager.Instance.miscEvents.OnBingoBongoChanged += MiscEvents_OnBingoBongoChanged;
 
@@ -104,15 +65,17 @@ public class QuestManager : NetworkBehaviour, IDataPersistence
 
         foreach (QuestInfoSO questInfoSO in allQuestInfoSOs) {
 
-            if (idToQuestMap.ContainsKey(questInfoSO.id)) {
+            if (idToQuestMap.ContainsKey(questInfoSO.Id)) {
                 Debug.LogError("When creating quest map, found multiple QuestInfoSOs with the same ID");
             }
 
-            idToQuestMap.Add(questInfoSO.id, new Quest(questInfoSO, playerIndex));
+            idToQuestMap.Add(questInfoSO.Id, new Quest(questInfoSO, playerIndex));
         }
 
         return idToQuestMap;
     }
+    
+    #endregion
 
     private Quest GetQuestByID(string id, int playerIndex) {
         if (playerQuestMaps[playerIndex].ContainsKey(id)) { //0 because all players have the same quests
@@ -123,96 +86,8 @@ public class QuestManager : NetworkBehaviour, IDataPersistence
         }
 
     }
-    
-    private QuestInfoSO GetQuestInfoSOByID(string id) {
-        if (playerQuestMaps[0].ContainsKey(id)) { //0 because all players have the same quests
-            return playerQuestMaps[0][id].info;
-        } else {
-            Debug.LogError("QuestManager's QuestMap didn't contain id: " + id);
-            return null;
-        }
-    }
 
-    //changes a quest's state and broadcasts the change with the event manager
-    private void ChangeQuestStateForGivenPlayerIndex(int playerIndex, string questToChangeId, QuestState newState) {
-        Quest quest = GetQuestByID(questToChangeId, playerIndex);
-        quest.state = newState;
-        // Debug.Log("Changed quest: " + quest.info.name + " to state: " + quest.state);
-        InvokeQuestStateChangeEventOnGivenClientRpc(playerIndex, quest.info.id, newState);
-    }
-
-    //If the quest is shared, then change the quest state on all clients
-    //If not, then only on the given player index
-    private void ChangeQuestStateOnAppropriateClients(int playerIndex, string questToChangeId, QuestState newState) {
-        Quest quest = GetQuestByID(questToChangeId, playerIndex);
-        if(quest.info.IsShared) {
-            for(int i = 0; i < playerQuestMaps.Count; i++) {
-                ChangeQuestStateForGivenPlayerIndex(i, questToChangeId, newState);
-            }
-        } else {
-            ChangeQuestStateForGivenPlayerIndex(playerIndex, questToChangeId, newState);
-        }
-    }
-
-    [Rpc(SendTo.Server)]
-    private void CheckAllRequirementsMetRpc() {
-        if (!IsServer) return;
-
-        for (int i = 0; i < 4; i++) {
-            foreach (Quest quest in playerQuestMaps[i].Values) {
-                if (quest.state == QuestState.REQUIREMENTS_NOT_MET) {
-                    //if the requirements were marked as not met
-
-                    if (CheckRequirementsMet(quest, i)) { //if that quests requirements are actually met
-                        // Debug.Log("Quest requirements met for quest: " + quest.info.id);
-                        ChangeQuestStateOnAppropriateClients(i, quest.info.id, QuestState.CAN_START);
-                    }
-                } else if (quest.state == QuestState.CAN_START){
-                    //if the requirements were marked as met
-                    
-                    if (!CheckRequirementsMet(quest, i)) {
-                        if (quest.info.IsShared) //If the quest is shared
-                        {
-                            //If any of the clients are meeting the requirements, do not revert to REQUIREMENTS_NOT_MET
-                            bool anyClientIsMeetingRequirements = false;
-                            for (int j = 0; j < i; j++)
-                            {
-                                if (CheckRequirementsMet(quest, j))
-                                {
-                                    anyClientIsMeetingRequirements = true;
-                                    break;
-                                }
-                            }
-
-                            if (anyClientIsMeetingRequirements)
-                            {
-                                continue;
-                            }
-                        }
-
-                        // Debug.Log("Quest requirements no longer met for quest: " + quest.info.id + " on any client");
-                        ChangeQuestStateOnAppropriateClients(i, quest.info.id, QuestState.REQUIREMENTS_NOT_MET);
-                    }
-                }
-            }
-        }
-    }
-
-    private bool CheckRequirementsMet(Quest quest, int playerIndex) {
-        if (currentBingoBongoCounts[playerIndex] < quest.info.bingoBongoRequirement) {
-            return false;
-        }
-
-        foreach(QuestInfoSO prerequisiteQuestInfoSO in quest.info.prerequisiteQuestInfoSos) {
-            if(GetQuestByID(prerequisiteQuestInfoSO.id, playerIndex).state != QuestState.FINISHED) {
-                return false;
-            }
-        }
-
-        //no requirements failed, so all must be met
-        return true;
-    }
-
+    #region ==== ON QUEST START, ADVANCE, FINISH, REQUESTED ====
 
     private void QuestEvents_OnStartQuest(object sender, QuestEvents.QuestEventArgs e) {
         QuestEvents_OnStartQuestServerRpc(e.QuestID, e.PlayerIndex);
@@ -222,6 +97,11 @@ public class QuestManager : NetworkBehaviour, IDataPersistence
     }
     private void QuestEvents_OnFinishQuest(object sender, QuestEvents.QuestEventArgs e) {
         QuestEvents_OnFinishQuestServerRpc(e.QuestID, e.PlayerIndex);
+    }
+    
+    private void QuestEvents_OnRequestQuestState(object sender, QuestEvents.QuestEventArgs e)
+    {
+        QuestEvents_OnRequestQuestStateServerRpc(e.QuestID, e.PlayerIndex);
     }
 
     [Rpc(SendTo.Server)]
@@ -267,7 +147,63 @@ public class QuestManager : NetworkBehaviour, IDataPersistence
         CheckAllRequirementsMetRpc();
     }
 
+    //Pre: A game object on a given client has requested the QM to broadcast the current state of a quest
+    //Invokes the OnQuestStateChange event for a given quest
+    [Rpc(SendTo.Server)]
+    private void QuestEvents_OnRequestQuestStateServerRpc(string questId, int playerIndex)
+    {
+        QuestState questStateToReport = GetQuestByID(questId, playerIndex).state;
+        InvokeQuestStateChangeEventOnGivenClientRpc(questId, questStateToReport, RpcTarget.Single((ulong)playerIndex, RpcTargetUse.Temp));
+    }
+    
+    #endregion
+    
+    #region ==== QUEST STATE CHANGING HELPERS ====
 
+    //If the quest is shared, then change the quest state on all clients
+    //If not, then only on the given player index
+    private void ChangeQuestStateOnAppropriateClients(int playerIndex, string questToChangeId, QuestState newState) {
+        Quest quest = GetQuestByID(questToChangeId, playerIndex);
+        if(quest.info.IsShared) {
+            for(int i = 0; i < playerQuestMaps.Count; i++) {
+                ChangeQuestStateForGivenPlayerIndex(i, questToChangeId, newState);
+            }
+        } else {
+            ChangeQuestStateForGivenPlayerIndex(playerIndex, questToChangeId, newState);
+        }
+    }
+    
+    //changes a quest's state and broadcasts the change with the event manager
+    private void ChangeQuestStateForGivenPlayerIndex(int playerIndex, string questToChangeId, QuestState newState) {
+        Quest quest = GetQuestByID(questToChangeId, playerIndex);
+        quest.state = newState;
+        // Debug.Log("Changed quest: " + quest.info.name + " to state: " + quest.state);
+        InvokeQuestStateChangeEventOnGivenClientRpc(quest.info.Id, newState, RpcTarget.Single((ulong)playerIndex, RpcTargetUse.Temp));
+    }
+    #endregion
+    
+
+    //invokes the quest state change event for all quests, on the client that owns that quest
+    private void BroadcastAllQuestStatesToRespectiveClients() {
+        if(!IsServer) return;
+
+        for (int i = 0; i < playerQuestMaps.Count; i++) {
+            foreach (Quest quest in playerQuestMaps[i].Values) {
+                InvokeQuestStateChangeEventOnGivenClientRpc(quest.info.Id, quest.state, RpcTarget.Single((ulong)i, RpcTargetUse.Temp));
+            }
+        }
+    }
+
+    [Rpc(SendTo.SpecifiedInParams)]
+    private void InvokeQuestStateChangeEventOnGivenClientRpc(
+        string questId,
+        QuestState newQuestState,
+        RpcParams rpcParams = default)
+    {
+        GameEventsManager.Instance.questEvents.InvokeQuestStateChange(this, questId, newQuestState);
+    }
+    
+    #region ==== TRACKING BINGO BONGO ====
     //tracking bingo bongo for quest requirements
     private void MiscEvents_OnBingoBongoChanged(object sender, MiscEvents.BingoBongoChangedEventArgs e) {
         UpdateBingoBongoCountForGivenClientIdRpc((int)NetworkManager.Singleton.LocalClientId, e.newBingoBongoCount);
@@ -278,6 +214,71 @@ public class QuestManager : NetworkBehaviour, IDataPersistence
     private void UpdateBingoBongoCountForGivenClientIdRpc(int playerIndex, int newBingoBongoCount){
         currentBingoBongoCounts[playerIndex] = newBingoBongoCount;
     }
+    #endregion
+    
+    #region ==== CHECKING REQUIREMENT HELPERS ====
+    [Rpc(SendTo.Server)]
+    private void CheckAllRequirementsMetRpc() {
+        if (!IsServer) return;
+
+        for (int i = 0; i < 4; i++) {
+            foreach (Quest quest in playerQuestMaps[i].Values) {
+                if (quest.state == QuestState.REQUIREMENTS_NOT_MET) {
+                    //if the requirements were marked as not met
+
+                    if (CheckRequirementsMet(quest, i)) { //if that quests requirements are actually met
+                        // Debug.Log("Quest requirements met for quest: " + quest.info.id);
+                        ChangeQuestStateOnAppropriateClients(i, quest.info.Id, QuestState.CAN_START);
+                    }
+                } else if (quest.state == QuestState.CAN_START){
+                    //if the requirements were marked as met
+                    
+                    if (!CheckRequirementsMet(quest, i)) {
+                        if (quest.info.IsShared) //If the quest is shared
+                        {
+                            //If any of the clients are meeting the requirements, do not revert to REQUIREMENTS_NOT_MET
+                            bool anyClientIsMeetingRequirements = false;
+                            for (int j = 0; j < i; j++)
+                            {
+                                if (CheckRequirementsMet(quest, j))
+                                {
+                                    anyClientIsMeetingRequirements = true;
+                                    break;
+                                }
+                            }
+
+                            if (anyClientIsMeetingRequirements)
+                            {
+                                continue;
+                            }
+                        }
+
+                        // Debug.Log("Quest requirements no longer met for quest: " + quest.info.id + " on any client");
+                        ChangeQuestStateOnAppropriateClients(i, quest.info.Id, QuestState.REQUIREMENTS_NOT_MET);
+                    }
+                }
+            }
+        }
+    }
+
+    private bool CheckRequirementsMet(Quest quest, int playerIndex) {
+        if (currentBingoBongoCounts[playerIndex] < quest.info.bingoBongoRequirement) {
+            return false;
+        }
+
+        foreach(QuestInfoSO prerequisiteQuestInfoSO in quest.info.prerequisiteQuestInfoSos) {
+            if(GetQuestByID(prerequisiteQuestInfoSO.Id, playerIndex).state != QuestState.FINISHED) {
+                return false;
+            }
+        }
+
+        //no requirements failed, so all must be met
+        return true;
+    }
+    
+    #endregion
+    
+    #region ==== SAVE/LOAD ====
     public void LoadData(GameData data) {
         for (int playerIndex = 0; playerIndex < playerQuestMaps.Count; playerIndex++) {
             Dictionary<string, Quest> questMap = playerQuestMaps[playerIndex];
@@ -322,23 +323,46 @@ public class QuestManager : NetworkBehaviour, IDataPersistence
             }
         }
     }
+    #endregion
+    
+    #region ===== DEBUG STUFF =====
+    [System.Serializable]
+    private struct QuestDebugRow
+    {
+        public int playerIndex;
+        public string questId;
+        public QuestState state;
+        public int stepIndex;
+    }
 
-    //invokes the quest state change event for all quests, on the client that owns that quest
-    private void BroadcastAllQuestStatesToRespectiveClients() {
-        if(!IsServer) return;
+    [Header("Debug (Play Mode)")]
+    [SerializeField] private List<QuestDebugRow> debugQuestSnapshot = new();
 
-        for (int i = 0; i < playerQuestMaps.Count; i++) {
-            foreach (Quest quest in playerQuestMaps[i].Values) {
-                InvokeQuestStateChangeEventOnGivenClientRpc(i, quest.info.id, quest.state);
+    [SerializeField] private bool debugActive = false;
+
+#if UNITY_EDITOR
+    private void LateUpdate()
+    {
+        if (!Application.isPlaying) return;
+        if (!debugActive) return;
+
+        debugQuestSnapshot.Clear();
+
+        for (int p = 0; p < playerQuestMaps.Count; p++)
+        {
+            foreach (var kvp in playerQuestMaps[p])
+            {
+                var q = kvp.Value;
+                debugQuestSnapshot.Add(new QuestDebugRow
+                {
+                    playerIndex = p,
+                    questId = kvp.Key,
+                    state = q.state,
+                    stepIndex = q.GetCurrentQuestStepIndex()
+                });
             }
         }
     }
-
-    [Rpc(SendTo.ClientsAndHost)]
-    private void InvokeQuestStateChangeEventOnGivenClientRpc(int clientIdToInvokeEvent, string questId, QuestState newQuestState) {
-        if ((int)NetworkManager.Singleton.LocalClientId == clientIdToInvokeEvent) {
-            // Debug.Log("Invoking quest state change event for quest: " + questId + " to state: " + newQuestState + " on client: " + clientIdToInvokeEvent);
-            GameEventsManager.Instance.questEvents.InvokeQuestStateChange(this, questId, newQuestState);
-        }
-    }
+#endif
+    #endregion
 }

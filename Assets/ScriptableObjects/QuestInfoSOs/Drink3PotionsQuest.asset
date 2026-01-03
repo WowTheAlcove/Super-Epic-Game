@@ -12,7 +12,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cb8a7efddec38da4789e12dfe20f491d, type: 3}
   m_Name: Drink3PotionsQuest
   m_EditorClassIdentifier: Assembly-CSharp::QuestInfoSO
-  <id>k__BackingField: Drink3PotionsQuest
+  <Id>k__BackingField: Drink3PotionsQuest
+  IsShared: 0
   displayName: Take them sips
   bingoBongoRequirement: 3
   prerequisiteQuestInfoSos: []

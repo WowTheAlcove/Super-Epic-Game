@@ -17,6 +17,7 @@ public class QuestEvents
     public event EventHandler<QuestEventArgs> OnStartQuest;
     public event EventHandler<QuestEventArgs> OnAdvanceQuest;
     public event EventHandler<QuestEventArgs> OnFinishQuest;
+    public event EventHandler<QuestEventArgs> OnRequestQuestState;
 
     public void InvokeStartQuest(object sender, string ID, int playerIndex) {
         OnStartQuest?.Invoke(null, new QuestEventArgs() { QuestID = ID, PlayerIndex = playerIndex });
@@ -32,5 +33,10 @@ public class QuestEvents
 
     public void InvokeQuestStateChange(object sender, string questId, QuestState newQuestState) {
         OnQuestStateChange?.Invoke(sender, new QuestStateChangeEventArgs() { QuestID = questId, NewQuestState = newQuestState});
+    }
+
+    public void InvokeRequestQuestState(object sender, string questId, int questPlayerIndex)
+    {
+        OnRequestQuestState?.Invoke(null, new QuestEventArgs() { QuestID = questId, PlayerIndex = questPlayerIndex });
     }
 }

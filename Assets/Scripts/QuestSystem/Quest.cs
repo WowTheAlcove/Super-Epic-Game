@@ -40,7 +40,7 @@ public class Quest
         if (questStepPrefab != null) {
             QuestStep questStep = Object.Instantiate<GameObject>(questStepPrefab, parentTransform).GetComponent<QuestStep>();
 
-            questStep.InitializeQuestStep(this.info.id, this.playerIndex);
+            questStep.InitializeQuestStep(this.info.Id, this.playerIndex);
             questStep.NetworkObject.Spawn();
         }
     }
@@ -51,7 +51,7 @@ public class Quest
             instantiatedQuestRewardLogic.SetPlayerIndex(playerIndex);
             instantiatedQuestRewardLogic.PerformRewardLogic();
         } else {
-            Debug.LogError("Tried to instantiate a quest reward prefab that doesn't exist on quest: " + this.info.id);
+            Debug.LogError("Tried to instantiate a quest reward prefab that doesn't exist on quest: " + this.info.Id);
         }
     }
 
@@ -66,6 +66,7 @@ public class Quest
 
 
 public enum QuestState {
+    NONE,
     REQUIREMENTS_NOT_MET,
     CAN_START,
     IN_PROGRESS,
