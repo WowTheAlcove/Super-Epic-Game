@@ -86,8 +86,8 @@ public class PlayerIndexSelectionUI : MonoBehaviour
             if (buttonText != null)
             {
                 buttonText.text = availableIndices.Contains(index) 
-                    ? $"Player {index}" 
-                    : $"Player {index} (Taken)";
+                    ? $"Player {index + 1}" 
+                    : $"Player {index + 1} (Taken)";
             }
         }
     }

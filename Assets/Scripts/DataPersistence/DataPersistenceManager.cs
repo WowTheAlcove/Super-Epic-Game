@@ -273,7 +273,7 @@ public class DataPersistenceManager : NetworkBehaviour {
         if (!IsServer) {
             //this command can only be run on the server
 
-            //Debug.LogWarning("SaveGame() didn't go through: can only be run on the server");
+            Debug.LogWarning("SaveGame() didn't go through: can only be run on the server");
 
             return;
         }
