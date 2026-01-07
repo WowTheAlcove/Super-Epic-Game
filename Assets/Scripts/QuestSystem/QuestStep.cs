@@ -24,15 +24,15 @@ public abstract class QuestStep : NetworkBehaviour, IDataPersistence
     }
 
     protected void FinishQuestStep() {
-        FinishQuestStepServerRpc((int)NetworkManager.Singleton.LocalClientId);
+        FinishQuestStepServerRpc();
     }
 
     [Rpc(SendTo.Server)]
-    protected void FinishQuestStepServerRpc(int playerIndex) {
+    protected void FinishQuestStepServerRpc() {
         if (!isFinished) {
             isFinished = true;
 
-            GameEventsManager.Instance.questEvents.InvokeAdvanceQuest(this, questId, playerIndex);
+            GameEventsManager.Instance.questEvents.InvokeAdvanceQuest(this, questId, playerIndex.Value);
 
             DataPersistenceManager.Instance.RemoveSaveId(GetComponent<SaveID>().Id);
             

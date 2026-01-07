@@ -7,17 +7,17 @@ public class Drink3PotionsQuestStep : QuestStep
     private int potionsDrank = 0;
     private int potionsDrinkToComplete = 3;
 
-    private void OnEnable() {
+    private void Start()
+    {
         GameEventsManager.Instance.miscEvents.OnPotionDrank += MiscEvents_OnPotionDrank;
     }
-
 
     private void OnDisable() {
         GameEventsManager.Instance.miscEvents.OnPotionDrank -= MiscEvents_OnPotionDrank;
     }
 
     private void MiscEvents_OnPotionDrank(object sender, System.EventArgs e) {
-        if (playerIndex.Value != NetworkManager.LocalClient.PlayerObject.GetComponent<PlayerController>().PlayerIndex) {
+        if (playerIndex.Value != PlayerIndexManager.Instance.GetLocalPlayerIndex()) {
             return;
         }
         if (potionsDrank < potionsDrinkToComplete) {

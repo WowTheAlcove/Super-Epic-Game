@@ -10,7 +10,7 @@ public class ArthurController : NetworkBehaviour, IInteractable, ICustomInteract
 
     private void Start()
     {
-        GameEventsManager.Instance.dialogueEvents.InvokeOnBindInkExternalFunction(this, "SpawnPot", SpawnKickablePotServerRpc);        
+        DialogueManager.Instance.BindInkExternalFunction("SpawnPot", SpawnKickablePotServerRpc);
     }
 
     public void Interact(PlayerController playerInteracting)

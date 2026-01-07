@@ -28,7 +28,6 @@ public class Break5PotsQuestStep : QuestStep
     {
         if (amtOfPotsBroken >= 5)
         {
-            Debug.Log("IsSpawned: " + IsSpawned);
             FinishQuestStep();
         }
     }

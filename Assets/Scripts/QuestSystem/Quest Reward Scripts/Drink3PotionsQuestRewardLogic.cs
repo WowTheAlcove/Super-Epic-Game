@@ -8,7 +8,7 @@ public class Drink3PotionsQuestRewardLogic : QuestRewardLogic
         PlayerController[] playerControllers = FindObjectsByType<PlayerController>(FindObjectsSortMode.None);
 
         foreach(PlayerController pc in playerControllers) {
-            if (pc.PlayerIndex == playerIndex) {
+            if (PlayerIndexManager.Instance.GetPlayerIndexForClientId(pc.OwnerClientId) == this.playerIndex) {
                 pc.GetComponentInChildren<BingoBongoStorer>().IncrementBingoBongoCount();
                 Destroy(this.gameObject);
                 return;

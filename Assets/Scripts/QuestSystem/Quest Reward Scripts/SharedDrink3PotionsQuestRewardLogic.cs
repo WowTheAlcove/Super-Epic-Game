@@ -6,9 +6,8 @@ public class SharedDrink3PotionsQuestRewardLogic : QuestRewardLogic {
         PlayerController[] players = FindObjectsByType<PlayerController>(FindObjectsSortMode.None);
 
         foreach (PlayerController pc in players) {
-            if (pc.PlayerIndex == playerIndex) {
-                pc.GetComponentInChildren<BingoBongoStorer>().IncrementBingoBongoCount();
-            }
+            pc.GetComponentInChildren<BingoBongoStorer>().IncrementBingoBongoCount();
         }
+        Destroy(this);
     }
 }

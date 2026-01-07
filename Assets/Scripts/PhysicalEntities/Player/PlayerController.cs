@@ -17,8 +17,6 @@ public class PlayerController : NetworkBehaviour, IDataPersistence {
     private Vector3 defaultPosition;
     private bool isMoving;
     public bool IsMoving => isMoving; // Public property to access isMoving state
-    public NetworkVariable<int> playerIndex = new NetworkVariable<int>();
-    public int PlayerIndex => playerIndex.Value;
 
     private Rigidbody2D myRigidBody;
     private Camera mainCamera;
@@ -63,11 +61,7 @@ public class PlayerController : NetworkBehaviour, IDataPersistence {
         //stores the default position of the player (asssigned in editor I think by Network Manager)
         defaultPosition = transform.position;
 
-        if (IsServer) {
-            playerIndex.Value = (int)OwnerClientId; //For other script's reference
-        }
-
-        //all users subscribe to selected hotbar slot changes to refresh the equipped item
+        //all users subscribe to selected hotbar slot changes to refresh equipped item
         hotbarStateStorer.SelectedSlotIndex.OnValueChanged += (oldValue, newValue) => {
             EquipItemInSelectedHotbarSlot();
         };
@@ -272,7 +266,7 @@ public class PlayerController : NetworkBehaviour, IDataPersistence {
     public void LoadData(GameData gameData) {
         if (!IsServer) return; // Only load data for the server
 
-        if (gameData.allPlayerData.TryGetValue(OwnerClientId.ToString(), out PlayerData playerData)) { //if there is saved data for this player
+        if (gameData.allPlayerData.TryGetValue(PlayerIndexManager.Instance.GetPlayerIndexForClientId(OwnerClientId).ToString(), out PlayerData playerData)) { //if there is saved data for this player
             //Debug.Log("Player controller is loading player data for player with client ID: " + OwnerClientId);
             // Load player position
             LoadPlayerPositionRpc(playerData.playerPositionData);

@@ -45,11 +45,16 @@ public class QuestIcon : MonoBehaviour
     //On Start, request the quest manager to report the state of all the quests this tracks
     private void Start()
     {
-        foreach (QuestToDisplay quest in trackedQuests)
+        if (QuestManager.Instance.IsSpawned)
         {
-            trackedQuestStates.Add(quest.questInfoSo.Id, QuestState.NONE);
-            GameEventsManager.Instance.questEvents.InvokeRequestQuestState(this, quest.questInfoSo.Id, (int)(NetworkManager.Singleton.LocalClientId));
+            foreach (QuestToDisplay quest in trackedQuests)
+            {
+                trackedQuestStates.Add(quest.questInfoSo.Id, QuestState.NONE);
+                GameEventsManager.Instance.questEvents.InvokeRequestQuestState(this, quest.questInfoSo.Id,
+                    PlayerIndexManager.Instance.GetLocalPlayerIndex());
+            }
         }
+
         GameEventsManager.Instance.questEvents.OnQuestStateChange += QuestEvents_OnQuestStateChange;
     }
 

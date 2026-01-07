@@ -13,6 +13,8 @@ public class DialogueManager : NetworkBehaviour, IDataPersistence
     [Header("Ink Story")]
     [SerializeField] private TextAsset inkJson;
 
+    public static DialogueManager Instance;
+    
     private Story myStory;
     private bool dialoguePlaying = false;
     private PlayerInputActions myInputActions; //for listening to advance dialogue input
@@ -23,6 +25,15 @@ public class DialogueManager : NetworkBehaviour, IDataPersistence
     #region ---- INITIALIZATION ----
     private void Awake()
     {
+        if (Instance == null)
+        {
+            Instance = this;
+        }
+        else
+        {
+            Debug.LogError("Second Dialogue Manager instance tried to be created");
+        }
+        
         myStory = new Story(inkJson.text);
         myInputActions = new PlayerInputActions();
         myInkVariablesWrapper = new InkVariablesWrapper(myStory);
@@ -30,17 +41,17 @@ public class DialogueManager : NetworkBehaviour, IDataPersistence
     private void Start()
     {
         NetworkManager.Singleton.OnClientConnectedCallback += NetworkManager_OnClientConnectedCallback;
-    }
-    private void OnEnable()
-    {
+        PlayerIndexManager.Instance.OnLocalPlayerIndexAssigned += Instance_OnLocalPlayerIndexAssigned;
+        
         myInputActions.Dialogue.AdvanceDialogue.performed += SkipDialogue_performed;
         GameEventsManager.Instance.dialogueEvents.OnEnterDialogue += DialogueEvents_OnEnterDialogue;
         GameEventsManager.Instance.dialogueEvents.onChoiceIndexChosen += DialogueEvents_OnChoiceIndexChosen;
-        GameEventsManager.Instance.dialogueEvents.OnBindInkExternalFunction += DialogueEvents_OnBindInkExternalFunction;
-        GameEventsManager.Instance.dialogueEvents.OnUnbindInkExternalFunction += DialogueEvents_OnUnbindInkExternalFunction;
         GameEventsManager.Instance.dialogueEvents.OnUpdateInkVariable += DialogueEvents_OnUpdateInkVariable;
         GameEventsManager.Instance.questEvents.OnQuestStateChange += QuestEvents_OnQuestStateChange;
-        
+    }
+
+    private void Instance_OnLocalPlayerIndexAssigned(int obj)
+    {
         BindQuestEventFunctions();
     }
 
@@ -49,8 +60,6 @@ public class DialogueManager : NetworkBehaviour, IDataPersistence
         myInputActions.Dialogue.AdvanceDialogue.performed -= SkipDialogue_performed;
         GameEventsManager.Instance.dialogueEvents.OnEnterDialogue -= DialogueEvents_OnEnterDialogue;    
         GameEventsManager.Instance.dialogueEvents.onChoiceIndexChosen -= DialogueEvents_OnChoiceIndexChosen;
-        GameEventsManager.Instance.dialogueEvents.OnBindInkExternalFunction -= DialogueEvents_OnBindInkExternalFunction;
-        GameEventsManager.Instance.dialogueEvents.OnUnbindInkExternalFunction -= DialogueEvents_OnUnbindInkExternalFunction;
         GameEventsManager.Instance.dialogueEvents.OnUpdateInkVariable -= DialogueEvents_OnUpdateInkVariable;
         GameEventsManager.Instance.questEvents.OnQuestStateChange -= QuestEvents_OnQuestStateChange;
         
@@ -183,13 +192,14 @@ public class DialogueManager : NetworkBehaviour, IDataPersistence
     #endregion
     
     #region ===== BINDING FUNCTIONS ======
-    private void DialogueEvents_OnBindInkExternalFunction(object sender, DialogueEvents.BindInkExternalFunctionEventArgs e)
+    public void BindInkExternalFunction(string functionName, Action action)
     {
-        myStory.BindExternalFunction(e.functionName, e.action);
+        // Debug.Log("Binding Ink Function: " + functionName);
+        myStory.BindExternalFunction(functionName, action);
     }
-    private void DialogueEvents_OnUnbindInkExternalFunction(object sender, DialogueEvents.UnbindInkExternalFunctionEventArgs e)
+    public void UnbindInkExternalFunction(string functionName)
     {
-        myStory.UnbindExternalFunction(e.functionName);
+        myStory.UnbindExternalFunction(functionName);
     }
 
     //binds the quest ink external functions invoke the appropriate quest events
@@ -200,31 +210,38 @@ public class DialogueManager : NetworkBehaviour, IDataPersistence
         myStory.BindExternalFunction("StartQuest", (string questId) => 
         {
             // Debug.Log("binding StartQuest");
-            GameEventsManager.Instance.questEvents.InvokeStartQuest(this, questId, (int)NetworkManager.Singleton.LocalClientId); 
+            GameEventsManager.Instance.questEvents.InvokeStartQuest(this, questId, PlayerIndexManager.Instance.GetLocalPlayerIndex()); 
             myInkVariablesWrapper.UpdateVariableState(questId + "State", "IN_PROGRESS", myStory);
         });
         myStory.BindExternalFunction("AdvanceQuest", (string questId) =>
         {
-            GameEventsManager.Instance.questEvents.InvokeAdvanceQuest(this, questId, (int)NetworkManager.Singleton.LocalClientId);
+            GameEventsManager.Instance.questEvents.InvokeAdvanceQuest(this, questId, PlayerIndexManager.Instance.GetLocalPlayerIndex());
         });
         myStory.BindExternalFunction("FinishQuest", (string questId) =>
         {
-            GameEventsManager.Instance.questEvents.InvokeFinishQuest(this, questId, (int)NetworkManager.Singleton.LocalClientId);
+            GameEventsManager.Instance.questEvents.InvokeFinishQuest(this, questId, PlayerIndexManager.Instance.GetLocalPlayerIndex());
             myInkVariablesWrapper.UpdateVariableState(questId + "State", "FINISHED", myStory);
         });
     }
 
     private void UnbindQuestEventFunctions()
     {
-        myStory.UnbindExternalFunction("StartQuest");
-        myStory.UnbindExternalFunction("AdvanceQuest");
-        myStory.UnbindExternalFunction("FinishQuest");
+        try 
+        {
+            myStory.UnbindExternalFunction("StartQuest");
+            myStory.UnbindExternalFunction("AdvanceQuest");
+            myStory.UnbindExternalFunction("FinishQuest");
+        }
+        catch (System.Exception)
+        {
+            // Function wasn't bound, no action needed
+        }
     }
     
     #endregion
 
     #region ---- TRACKING SAVE/LOAD STATE ----
-    private Dictionary<ulong, InkNSerializableVariable[]> pendingClientInkVariables = new Dictionary<ulong, InkNSerializableVariable[]>();
+    private Dictionary<int, InkNSerializableVariable[]> pendingClientInkVariables = new Dictionary<int, InkNSerializableVariable[]>();
     private bool isSaving = false;
     private Action onFinishedSaving; //Callback to notify DPM when done saving
     #endregion
@@ -239,10 +256,9 @@ public class DialogueManager : NetworkBehaviour, IDataPersistence
         //For each of the connected clients, look up their client id in gamedata for ink variables
         foreach (ulong clientId in NetworkManager.Singleton.ConnectedClientsIds)
         {
-            string clientIdStr = clientId.ToString();
             
             //If we do not have saved data for this player, reset their ink variables
-            if (!gameData.allClientsInkVariableSaveDataCollections.ContainsKey(clientIdStr))
+            if (!gameData.allClientsInkVariableSaveDataCollections.ContainsKey(PlayerIndexManager.Instance.GetPlayerIndexForClientId(clientId).ToString()))
             {
                 RpcParams resetRpcParams = new RpcParams
                 {
@@ -263,13 +279,14 @@ public class DialogueManager : NetworkBehaviour, IDataPersistence
     //Pre: clientId is a key in GameData's ink vars
     public void LoadDataForClient(ulong clientId, GameData gameData)
     {
-        if (!gameData.allClientsInkVariableSaveDataCollections.ContainsKey(clientId.ToString()))
+        string playerIndex = PlayerIndexManager.Instance.GetPlayerIndexForClientId(clientId).ToString();
+        if (!gameData.allClientsInkVariableSaveDataCollections.ContainsKey(playerIndex))
         {
             // The client didn't have any saved data
             return;
         }
         
-        ClientsInkVariableSaveDataCollection clientsSavedInkVars = gameData.allClientsInkVariableSaveDataCollections[clientId.ToString()];
+        ClientsInkVariableSaveDataCollection clientsSavedInkVars = gameData.allClientsInkVariableSaveDataCollections[playerIndex];
         
         //Convert InkVariableSaveData to InkNSerializableVariable
         InkNSerializableVariable[] serializableVariables = new InkNSerializableVariable[clientsSavedInkVars.inkVariables.Count];
@@ -430,9 +447,8 @@ public class DialogueManager : NetworkBehaviour, IDataPersistence
     [Rpc(SendTo.Server)]
     private void SendInkVariablesToServerServerRpc(InkNSerializableVariable[] entries, RpcParams rpcParams = default)
     {
-        ulong senderClientId = rpcParams.Receive.SenderClientId;
-        pendingClientInkVariables[senderClientId] = entries;
-        // Debug.Log($"Dialgoue manager received {entries.Length} ink variables from client {senderClientId} to put into pendingClientInkVariables");
+        pendingClientInkVariables[PlayerIndexManager.Instance.GetPlayerIndexForClientId(rpcParams.Receive.SenderClientId)] = entries;
+        // Debug.Log($"Dialgoue manager received {entries.Length} ink variables from player index: {PlayerIndexManager.Instance.GetLocalPlayerIndex()} to put into pendingClientInkVariables");
     }
     
     

@@ -16,19 +16,15 @@ public class ChickenController : MonoBehaviour, IInteractable
 
     private void Start()
     {
-        GameEventsManager.Instance.dialogueEvents.InvokeOnBindInkExternalFunction(
-            this, "StartFollowingRecentPlayer", () => StartFollowingRecentlyInteractedPlayer()
-        );
-        GameEventsManager.Instance.dialogueEvents.InvokeOnBindInkExternalFunction(
-            this, "StopFollowing", () => StopFollowing()
-        );
-        
+        // Debug.Log("About to call bind function");
+        DialogueManager.Instance.BindInkExternalFunction("StartFollowingRecentPlayer", () => StartFollowingRecentlyInteractedPlayer());
+        DialogueManager.Instance.BindInkExternalFunction("StopFollowing", () => StopFollowing());
     }
 
     private void OnDestroy()
     {
-        GameEventsManager.Instance.dialogueEvents.InvokeOnUnbindInkExternalFunction(this, "StartFollowingRecentPlayer");
-        GameEventsManager.Instance.dialogueEvents.InvokeOnUnbindInkExternalFunction(this, "StopFollowing");
+        DialogueManager.Instance.UnbindInkExternalFunction("StartFollowingRecentPlayer");
+        DialogueManager.Instance.UnbindInkExternalFunction("StopFollowing");
     }
 
     public void Interact(PlayerController playerInteracting)

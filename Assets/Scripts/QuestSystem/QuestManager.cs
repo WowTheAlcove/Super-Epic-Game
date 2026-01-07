@@ -10,13 +10,17 @@ using System.Linq;
 
 public class QuestManager : NetworkBehaviour, IDataPersistence
 {
-
+    public static QuestManager Instance { get; private set; }
+    
     private List<Dictionary<string, Quest>> playerQuestMaps;
 
     private List<int> currentBingoBongoCounts;
 
     #region ==== INITIALIZATION ====
-    private void Awake() {
+    private void Awake()
+    {
+        Instance = this;
+        
         currentBingoBongoCounts = new List<int>() { 0, 0, 0, 0 };
 
         playerQuestMaps = new List<Dictionary<string, Quest>>();
@@ -33,8 +37,8 @@ public class QuestManager : NetworkBehaviour, IDataPersistence
 
         GameEventsManager.Instance.miscEvents.OnBingoBongoChanged += MiscEvents_OnBingoBongoChanged;
 
-        if (NetworkManager.Singleton != null) {
-            NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
+        if (PlayerIndexManager.Instance != null) {
+            PlayerIndexManager.Instance.OnPlayerIndexAssigned += Instance_OnPlayerIndexAssigned;
         } else {
             Debug.LogError("QuestManager OnEnable: NetworkManager.Singleton was null");
         }
@@ -46,13 +50,12 @@ public class QuestManager : NetworkBehaviour, IDataPersistence
         GameEventsManager.Instance.questEvents.OnFinishQuest -= QuestEvents_OnFinishQuest;
 
         GameEventsManager.Instance.miscEvents.OnBingoBongoChanged -= MiscEvents_OnBingoBongoChanged;
-
-        if (NetworkManager.Singleton != null) {
-            NetworkManager.Singleton.OnClientConnectedCallback -= OnClientConnected;
-        }
+        PlayerIndexManager.Instance.OnPlayerIndexAssigned -= Instance_OnPlayerIndexAssigned;
+        
     }
 
-    private void OnClientConnected(ulong clientId) {
+    private void Instance_OnPlayerIndexAssigned(int playerIndex, ulong clientId)
+    {
         BroadcastAllQuestStatesToRespectiveClients();
     }
 
@@ -101,6 +104,7 @@ public class QuestManager : NetworkBehaviour, IDataPersistence
     
     private void QuestEvents_OnRequestQuestState(object sender, QuestEvents.QuestEventArgs e)
     {
+        Debug.Log("NetworkManager exists: " + NetworkManager.Singleton != null);
         QuestEvents_OnRequestQuestStateServerRpc(e.QuestID, e.PlayerIndex);
     }
 
@@ -153,7 +157,11 @@ public class QuestManager : NetworkBehaviour, IDataPersistence
     private void QuestEvents_OnRequestQuestStateServerRpc(string questId, int playerIndex)
     {
         QuestState questStateToReport = GetQuestByID(questId, playerIndex).state;
-        InvokeQuestStateChangeEventOnGivenClientRpc(questId, questStateToReport, RpcTarget.Single((ulong)playerIndex, RpcTargetUse.Temp));
+        ulong? clientId = PlayerIndexManager.Instance.GetClientIdForIndex(playerIndex);
+        if (clientId != null)
+        {
+            InvokeQuestStateChangeEventOnGivenClientRpc(questId, questStateToReport, RpcTarget.Single(clientId.Value, RpcTargetUse.Temp));
+        }
     }
     
     #endregion
@@ -178,7 +186,11 @@ public class QuestManager : NetworkBehaviour, IDataPersistence
         Quest quest = GetQuestByID(questToChangeId, playerIndex);
         quest.state = newState;
         // Debug.Log("Changed quest: " + quest.info.name + " to state: " + quest.state);
-        InvokeQuestStateChangeEventOnGivenClientRpc(quest.info.Id, newState, RpcTarget.Single((ulong)playerIndex, RpcTargetUse.Temp));
+        ulong? clientId = PlayerIndexManager.Instance.GetClientIdForIndex(playerIndex);
+        if (clientId != null)
+        {
+            InvokeQuestStateChangeEventOnGivenClientRpc(quest.info.Id, newState, RpcTarget.Single(clientId.Value, RpcTargetUse.Temp));
+        }
     }
     #endregion
     
@@ -187,9 +199,16 @@ public class QuestManager : NetworkBehaviour, IDataPersistence
     private void BroadcastAllQuestStatesToRespectiveClients() {
         if(!IsServer) return;
 
+       //For all of the player quest maps
         for (int i = 0; i < playerQuestMaps.Count; i++) {
+            ulong? targetClientId = PlayerIndexManager.Instance.GetClientIdForIndex(i);
+            if (!targetClientId.HasValue) {
+                //Skip this player quest map if it's player isn't joined
+                continue;
+            }
+            //for each of theier quests
             foreach (Quest quest in playerQuestMaps[i].Values) {
-                InvokeQuestStateChangeEventOnGivenClientRpc(quest.info.Id, quest.state, RpcTarget.Single((ulong)i, RpcTargetUse.Temp));
+                InvokeQuestStateChangeEventOnGivenClientRpc(quest.info.Id, quest.state, RpcTarget.Single(targetClientId.Value, RpcTargetUse.Temp));
             }
         }
     }
@@ -206,7 +225,7 @@ public class QuestManager : NetworkBehaviour, IDataPersistence
     #region ==== TRACKING BINGO BONGO ====
     //tracking bingo bongo for quest requirements
     private void MiscEvents_OnBingoBongoChanged(object sender, MiscEvents.BingoBongoChangedEventArgs e) {
-        UpdateBingoBongoCountForGivenClientIdRpc((int)NetworkManager.Singleton.LocalClientId, e.newBingoBongoCount);
+        UpdateBingoBongoCountForGivenClientIdRpc(PlayerIndexManager.Instance.GetLocalPlayerIndex(), e.newBingoBongoCount);
         CheckAllRequirementsMetRpc();
     }
 

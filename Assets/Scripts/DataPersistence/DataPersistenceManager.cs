@@ -63,7 +63,13 @@ public class DataPersistenceManager : NetworkBehaviour {
         if (IsServer) {
             currentGameData = new GameData();
             StartCoroutine(AutoSaveWhenAllNOsSpawned());
-            NetworkManager.Singleton.OnConnectionEvent += NetworkManager_OnConnectionEvent;
+            if (PlayerIndexManager.Instance != null) {
+                PlayerIndexManager.Instance.OnPlayerIndexAssigned += Instance_OnPlayerIndexAssigned;
+            }
+            else
+            {
+                Debug.LogError("DPM spawned without PIM being instantiated");
+            }
         }
     }
 
@@ -73,7 +79,7 @@ public class DataPersistenceManager : NetworkBehaviour {
         base.OnNetworkDespawn();
         if (IsServer)
         {
-            NetworkManager.Singleton.OnConnectionEvent -= NetworkManager_OnConnectionEvent;
+            PlayerIndexManager.Instance.OnPlayerIndexAssigned += Instance_OnPlayerIndexAssigned;
         }
     }
 
@@ -452,24 +458,25 @@ public class DataPersistenceManager : NetworkBehaviour {
         return matchingItem;
     }
     
-    //When a client loads, load all the data it needs 
-    //Automatically only runs on server
-    private void NetworkManager_OnConnectionEvent(NetworkManager NetworkManager, ConnectionEventData connectionEventData)
+    //Pre: A client has selected their player index
+    // Load that client's data from the saved data associated with that player index
+    private void Instance_OnPlayerIndexAssigned(int playerIndex, ulong clientId)
     {
-        if (connectionEventData.EventType == ConnectionEvent.ClientDisconnected ||
-                connectionEventData.EventType == ConnectionEvent.PeerDisconnected)//If this event was from someone disconnecting
-        {
+        if (!IsServer) return;
+        
+        if (currentGameData == null) {
+            Debug.LogWarning("Cannot load player data - currentGameData is null");
             return;
         }
-        if (currentGameData == null) //If the game hasn't even loaded or anything yet
-        {
-            return;
+        
+        PlayerController playerController = FindPlayerControllerByClientId(clientId);
+        if (playerController != null) {
+            playerController.LoadData(currentGameData);
         }
-        ulong connectedClientId = connectionEventData.ClientId;
-        FindPlayerControllerByClientId(connectedClientId).LoadData(currentGameData); //Load the PlayerController's data
         
         DialogueManager dialogueManager = FindAnyObjectByType<DialogueManager>();
-        dialogueManager.LoadDataForClient(connectedClientId, currentGameData);
+        if (dialogueManager != null) {
+            dialogueManager.LoadDataForClient(clientId, currentGameData);
+        }
     }
-    
 }
