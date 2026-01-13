@@ -162,7 +162,7 @@ public class DataPersistenceManager : NetworkBehaviour {
 
     //method to be called by clients player controllers when they have loaded their position
     [Rpc(SendTo.Server)]
-    public void ClientLoadedPositionRpc(ulong clientId, Vector3 clientReportedPosition) {
+    public void ClientHasLoadedPositionRpc(ulong clientId, Vector3 clientReportedPosition) {
         if (!isSavingOrLoading) {
             //we only care about this if this player position is being set during a loading state
             return;

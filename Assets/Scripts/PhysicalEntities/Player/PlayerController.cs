@@ -4,25 +4,19 @@ using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-public class PlayerController : NetworkBehaviour, IDataPersistence {
+public class PlayerController : NetworkBehaviour {
     [Header("Player stats")]
     [SerializeField] private float moveSpeed;
     [SerializeField] private float interactionRange = 4f;
 
-    [Header("References to other components on this GO")]
-    [SerializeField] private HotbarStateStorer hotbarStateStorer;
-    [SerializeField] private InventoryStateStorer inventoryStateStorer;
-    [SerializeField] private BingoBongoStorer bingoBongoStorer;
+    [SerializeField] private PlayerStateStorer playerStateStorer;
 
-    private Vector3 defaultPosition;
     private bool isMoving;
     public bool IsMoving => isMoving; // Public property to access isMoving state
 
     private Rigidbody2D myRigidBody;
     private Camera mainCamera;
     private PlayerInputActions myPlayerInputActions;
-    private ItemSO currentEquippedItemSO = null;
-    private BehaviourItem currentEquippedItemBehaviour;
     public event EventHandler<OnEquippedItemEventArgs> OnEquippedItem;
     public class OnEquippedItemEventArgs : EventArgs {
         public ItemSO newEquippedItemSO;
@@ -57,12 +51,8 @@ public class PlayerController : NetworkBehaviour, IDataPersistence {
 
         }
         
-
-        //stores the default position of the player (asssigned in editor I think by Network Manager)
-        defaultPosition = transform.position;
-
         //all users subscribe to selected hotbar slot changes to refresh equipped item
-        hotbarStateStorer.SelectedSlotIndex.OnValueChanged += (oldValue, newValue) => {
+        playerStateStorer.GetHotbarStateStorer().SelectedSlotIndex.OnValueChanged += (oldValue, newValue) => {
             EquipItemInSelectedHotbarSlot();
         };
     }
@@ -111,12 +101,12 @@ public class PlayerController : NetworkBehaviour, IDataPersistence {
     }
 
     private void SubscribeEquipRefreshToInventoryChanges() {
-        inventoryStateStorer.CurrentInventory.OnListChanged += CurrentInventory_OnListChanged;
-        hotbarStateStorer.CurrentInventory.OnListChanged += CurrentHotbar_OnListChanged;
+        playerStateStorer.GetInventoryStateStorer().CurrentInventory.OnListChanged += CurrentInventory_OnListChanged;
+        playerStateStorer.GetHotbarStateStorer().CurrentInventory.OnListChanged += CurrentHotbar_OnListChanged;
     }
     private void UnsubscribeEquipRefreshToInventoryChanges() {
-        inventoryStateStorer.CurrentInventory.OnListChanged -= CurrentInventory_OnListChanged;
-        hotbarStateStorer.CurrentInventory.OnListChanged -= CurrentHotbar_OnListChanged;
+        playerStateStorer.GetInventoryStateStorer().CurrentInventory.OnListChanged -= CurrentInventory_OnListChanged;
+        playerStateStorer.GetHotbarStateStorer().CurrentInventory.OnListChanged -= CurrentHotbar_OnListChanged;
     }
     private void CurrentHotbar_OnListChanged(NetworkListEvent<int> changeEvent) {
         EquipItemInSelectedHotbarSlot();
@@ -151,7 +141,7 @@ public class PlayerController : NetworkBehaviour, IDataPersistence {
     }
 
     private void BingoBongo_performed(InputAction.CallbackContext obj) {
-        bingoBongoStorer.IncrementBingoBongoCount();
+        playerStateStorer.GetBingoBongoStorer().IncrementBingoBongoCount();
     }
 
     private void Interact_performed(InputAction.CallbackContext obj) {
@@ -180,8 +170,11 @@ public class PlayerController : NetworkBehaviour, IDataPersistence {
     }
 
     //if the equipped item is not null and is usable, call its Use() method
-    private void UseEquippedItem_performed(InputAction.CallbackContext obj) {
-        if (currentEquippedItemSO != null) {
+    private void UseEquippedItem_performed(InputAction.CallbackContext obj)
+    {
+        ItemSO currentEquippedItemSo = playerStateStorer.GetCurrentEquippedItemSO();
+        BehaviourItem currentEquippedItemBehaviour = playerStateStorer.GetCurrentEquippedItemBehaviour();
+        if (currentEquippedItemSo != null) {
             if (currentEquippedItemBehaviour is IUsableItem) {
                 //if the equipped item is usable
                 IUsableItem currentEquippedItemUsage = currentEquippedItemBehaviour as IUsableItem;
@@ -197,53 +190,53 @@ public class PlayerController : NetworkBehaviour, IDataPersistence {
 
     //methods setting equippedItem and instantiating it
     private void HotbarSlot1Pressed_performed(InputAction.CallbackContext obj) {
-        hotbarStateStorer.SelectSlot(0);
+        playerStateStorer.GetHotbarStateStorer().SelectSlot(0);
     }
     private void HotbarSlot2Pressed_performed(InputAction.CallbackContext obj) {
-        hotbarStateStorer.SelectSlot(1);
+        playerStateStorer.GetHotbarStateStorer().SelectSlot(1);
     }
     private void HotbarSlot3Pressed_performed(InputAction.CallbackContext obj) {
-        hotbarStateStorer.SelectSlot(2);
+        playerStateStorer.GetHotbarStateStorer().SelectSlot(2);
     }
     private void HotbarSlot4Pressed_performed(InputAction.CallbackContext obj) {
-        hotbarStateStorer.SelectSlot(3);
+        playerStateStorer.GetHotbarStateStorer().SelectSlot(3);
     }
 
     #endregion
 
     //helper method: select first slot of the hotbar and instantiate the item in it
     private void InitializeHotbar() {
-        if (hotbarStateStorer != null) {
-            hotbarStateStorer.SelectSlot(0);
+        if (playerStateStorer.GetHotbarStateStorer() != null) {
+            playerStateStorer.GetHotbarStateStorer().SelectSlot(0);
         }
     }
 
     //Sets equipped item to a given ItemSO, stores it's BehaviourItem script and tells player visual to instantiate it's prefab
-    private void EquipItem(ItemSO itemSOToEquip){
-        currentEquippedItemSO = itemSOToEquip;
-
-        //set the behaviour item script accordingly
-        if (currentEquippedItemSO != null) {
-            //if we equipped an item
-            currentEquippedItemBehaviour = currentEquippedItemSO.behaviourItemPrefab.GetComponent<BehaviourItem>();
-            if (currentEquippedItemBehaviour == null) {
+    private void EquipItem(ItemSO itemSOToEquip)
+    {
+        BehaviourItem behaviourItem = null;
+        
+        // Set the behaviour item script accordingly
+        if (itemSOToEquip != null) {
+            behaviourItem = itemSOToEquip.behaviourItemPrefab.GetComponent<BehaviourItem>();
+            if (behaviourItem == null) {
                 Debug.LogError("Player equipped item: " + itemSOToEquip.itemName + ", which doesn't have a behaviour item script on its prefab");
             }
-        } else {
-            //if we equipped an empty slot
-            currentEquippedItemBehaviour = null;
         }
+
+        // Store in PlayerStateStorer
+        playerStateStorer.SetEquippedItem(itemSOToEquip, behaviourItem);
 
         OnEquippedItem?.Invoke(this, new OnEquippedItemEventArgs() { newEquippedItemSO = itemSOToEquip });
     }
 
     //helper method: refresh the equipped item based on the current hotbar selection
     private void EquipItemInSelectedHotbarSlot() {
-        if (hotbarStateStorer.CurrentInventory.Count < hotbarStateStorer.GetNumOfSlots()) {
+        if (playerStateStorer.GetHotbarStateStorer().CurrentInventory.Count < playerStateStorer.GetHotbarStateStorer().GetNumOfSlots()) {
             //if the hotbar is uninitialized or not fully initialized, maybe because player data is still loading
             return;
         }
-        EquipItem(hotbarStateStorer.GetSelectedIndexItemSO());
+        EquipItem(playerStateStorer.GetHotbarStateStorer().GetSelectedIndexItemSO());
     }
 
     //on FixedUpdate we read from the input system and move the player accordingly
@@ -253,7 +246,7 @@ public class PlayerController : NetworkBehaviour, IDataPersistence {
             isMoving = inputMoveVector.magnitude > 0;//set isMoving
 
             if (isMoving) {
-                myRigidBody.AddForce(inputMoveVector * moveSpeed * Time.fixedDeltaTime, ForceMode2D.Force);
+                myRigidBody.AddForce(inputMoveVector * (moveSpeed * Time.fixedDeltaTime), ForceMode2D.Force);
             }
         }
     }
@@ -262,68 +255,17 @@ public class PlayerController : NetworkBehaviour, IDataPersistence {
         return myPlayerInputActions.Player.Movement.ReadValue<Vector2>();
     }
 
-    #region loading and saving player data
-    public void LoadData(GameData gameData) {
-        if (!IsServer) return; // Only load data for the server
-
-        if (gameData.allPlayerData.TryGetValue(PlayerIndexManager.Instance.GetPlayerIndexForClientId(OwnerClientId).ToString(), out PlayerData playerData)) { //if there is saved data for this player
-            //Debug.Log("Player controller is loading player data for player with client ID: " + OwnerClientId);
-            // Load player position
-            LoadPlayerPositionRpc(playerData.playerPositionData);
-
-            bingoBongoStorer.LoadPlayerData(playerData.bingoBongoCountData);
-
-            // Load item data to hotbar and inventory
-            hotbarStateStorer.LoadPlayerData(playerData.hotbarData);
-            inventoryStateStorer.LoadPlayerData(playerData.inventoryData);
-
-        } else {
-            //if the game data had no saved data for this player
-            SetDefaultValues();
-        }
-    }
-
-    [Rpc(SendTo.ClientsAndHost)]
-    private void LoadPlayerPositionRpc(Vector3 newPosition) {
-        if (IsOwner){
-            transform.position = newPosition;
-
-            if (DataPersistenceManager.Instance.IsSpawned) {
-                //Debug.Log("Telling DPM that player with client ID " + OwnerClientId + " has loaded at position: " + newPosition);
-                DataPersistenceManager.Instance.ClientLoadedPositionRpc(OwnerClientId, transform.position);
-            }
-        }
-    }
-    public void SaveData(ref GameData gameData) {
-        if (!IsServer) return; // Only save data for the server
-
-        PlayerData playerData = new PlayerData();
-
-        playerData.playerPositionData = transform.position;
-        playerData.bingoBongoCountData = bingoBongoStorer.GetBingoBongoCount();
-
-        playerData.hotbarData = hotbarStateStorer.GetInventorySaveData();
-        playerData.inventoryData = inventoryStateStorer.GetInventorySaveData();
-
-        gameData.allPlayerData[OwnerClientId.ToString()] = playerData;
-    }
-
-    private void SetDefaultValues() {
-        // Set default values for the player
-        LoadPlayerPositionRpc(defaultPosition);
-
-        bingoBongoStorer.ResetBingoBongoCount();
-        hotbarStateStorer.SetInventoryToEmptyServerRpc();
-        inventoryStateStorer.SetInventoryToEmptyServerRpc();
-    }
 
     public InventoryStateStorer GetInventoryISS() {
-        return inventoryStateStorer;
+        return playerStateStorer.GetInventoryStateStorer();
     }
 
     public HotbarStateStorer GetHotbarISS() {
-        return hotbarStateStorer;
+        return playerStateStorer.GetHotbarStateStorer();
     }
 
-    #endregion
+    public void LoadData(GameData gameData)
+    {
+        playerStateStorer.LoadData(gameData);
+    }
 }
