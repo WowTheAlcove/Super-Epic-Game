@@ -1,10 +1,10 @@
-using Cinemachine;
+using Unity.Cinemachine;
 using UnityEngine;
 
 public class CameraBoundary : MonoBehaviour
 {
 
-    private CinemachineConfiner localCmCamera;
+    private CinemachineConfiner2D localCmCamera;
     private Collider2D boundaryCollider;
 
     private void Start() {
@@ -12,7 +12,7 @@ public class CameraBoundary : MonoBehaviour
         if(boundaryCollider == null)
             Debug.LogError("CameraBoundary requires a Collider2D component.");
 
-        localCmCamera = FindFirstObjectByType<CinemachineConfiner>();
+        localCmCamera = FindFirstObjectByType<CinemachineConfiner2D>();
         if(localCmCamera == null)
             Debug.LogError("No CinemachineConfiner found in the scene.");
     }
@@ -21,7 +21,7 @@ public class CameraBoundary : MonoBehaviour
         PlayerController enteringPlayer = collision.GetComponent<PlayerController>();
 
         if (enteringPlayer != null && enteringPlayer.IsOwner){ //if what entered was the local player
-            localCmCamera.m_BoundingShape2D = boundaryCollider;
+            localCmCamera.BoundingShape2D = boundaryCollider;
         }
     }
 }

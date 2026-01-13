@@ -1,4 +1,4 @@
-using Cinemachine;
+using Unity.Cinemachine;
 using System;
 using Unity.Netcode;
 using UnityEngine;
@@ -39,7 +39,7 @@ public class PlayerController : NetworkBehaviour, IDataPersistence {
         mainCamera = Camera.main; //for raycasting
 
         //set the cinemachine camera to follow this player
-        Cinemachine.CinemachineVirtualCamera cmCamera = FindFirstObjectByType<CinemachineVirtualCamera>();
+        CinemachineCamera cmCamera = FindFirstObjectByType<CinemachineCamera>();
         cmCamera.Follow = this.transform;
 
         UIController.Instance.OnInputFreezingMenuEnabled += UIController_OnInputFreezingMenuEnabled;
