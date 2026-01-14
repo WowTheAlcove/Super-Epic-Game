@@ -393,6 +393,15 @@ MonoBehaviour:
   hotbarStateStorer: {fileID: 9131799645790321101}
   inventoryStateStorer: {fileID: 1348887817877046066}
   bingoBongoStorer: {fileID: 7893703668626336394}
+  waterMask:
+    serializedVersion: 2
+    m_Bits: 16
+  landMask:
+    serializedVersion: 2
+    m_Bits: 8
+  boatMask:
+    serializedVersion: 2
+    m_Bits: 512
 --- !u!114 &6017494485691611953
 MonoBehaviour:
   m_ObjectHideFlags: 0

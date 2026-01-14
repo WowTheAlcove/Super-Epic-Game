@@ -49,6 +49,7 @@ public class PlayerData {
     public int bingoBongoCountData;
     public InventorySaveData hotbarData;
     public InventorySaveData inventoryData;
+    public PlayersSurface playersSurfaceData;
 
     public PlayerData() {
         hotbarData = new InventorySaveData();

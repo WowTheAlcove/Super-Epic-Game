@@ -1,15 +1,33 @@
+using System;
+using NUnit.Framework.Constraints;
 using Unity.Netcode;
 using UnityEngine;
 
+public enum PlayersSurface
+{
+    NONE,
+    BOAT,
+    LAND,
+    WATER,
+}
 public class PlayerStateStorer : NetworkBehaviour, IDataPersistence {
     [Header("References to State Storers")]
     [SerializeField] private HotbarStateStorer hotbarStateStorer;
     [SerializeField] private InventoryStateStorer inventoryStateStorer;
     [SerializeField] private BingoBongoStorer bingoBongoStorer;
+    [SerializeField] LayerMask waterMask, landMask, boatMask;
 
     private Vector3 defaultPosition;
+    private PlayersSurface myPlayersSurface;
+    private float probeRadius = 0.08f;
+    
     private ItemSO currentEquippedItemSO = null;
     private BehaviourItem currentEquippedItemBehaviour;
+
+    private void Start()
+    {
+        myPlayersSurface = DetectPlayerSurface();
+    }
 
     public override void OnNetworkSpawn() {
         base.OnNetworkSpawn();
@@ -51,7 +69,7 @@ public class PlayerStateStorer : NetworkBehaviour, IDataPersistence {
 
     #endregion
 
-    #region Data Persistence
+    #region ==== DATA PERSISTENCE ====
 
     public void LoadData(GameData gameData) {
         Debug.Log("LoadData called for playerStateStorer with clientid: " + OwnerClientId + " and index: " + PlayerIndexManager.Instance.GetPlayerIndexForClientId(OwnerClientId));
@@ -61,6 +79,7 @@ public class PlayerStateStorer : NetworkBehaviour, IDataPersistence {
             // Load player position
             LoadPlayerPositionRpc(playerData.playerPositionData);
 
+            myPlayersSurface = playerData.playersSurfaceData;
             bingoBongoStorer.LoadPlayerData(playerData.bingoBongoCountData);
 
             // Load item data to hotbar and inventory
@@ -90,8 +109,10 @@ public class PlayerStateStorer : NetworkBehaviour, IDataPersistence {
         PlayerData playerData = new PlayerData();
 
         playerData.playerPositionData = transform.position;
+        playerData.playersSurfaceData = myPlayersSurface;
+        
         playerData.bingoBongoCountData = bingoBongoStorer.GetBingoBongoCount();
-
+        
         playerData.hotbarData = hotbarStateStorer.GetInventorySaveData();
         playerData.inventoryData = inventoryStateStorer.GetInventorySaveData();
 
@@ -106,6 +127,31 @@ public class PlayerStateStorer : NetworkBehaviour, IDataPersistence {
         hotbarStateStorer.SetInventoryToEmptyServerRpc();
         inventoryStateStorer.SetInventoryToEmptyServerRpc();
     }
-
+    
     #endregion
+    
+    /// <summary>
+    ///Returns what surface the player is standing on
+    /// </summary>
+    /// <returns>PlayerSurface enum</returns>
+    private PlayersSurface DetectPlayerSurface()
+    {
+        if (Physics2D.OverlapCircle(this.transform.position, probeRadius, boatMask))
+        {
+            return PlayersSurface.BOAT;
+        } 
+        else if (Physics2D.OverlapCircle(this.transform.position, probeRadius, landMask))
+        {
+            return PlayersSurface.LAND;
+        }
+        else if(Physics2D.OverlapCircle(this.transform.position, probeRadius, waterMask))
+        {
+            return PlayersSurface.WATER;
+        }
+        else
+        {
+            Debug.LogError("DetectPlayerSurface() couldn't detect any of the eligible masks");
+            return PlayersSurface.NONE;
+        }
+    }
 }
