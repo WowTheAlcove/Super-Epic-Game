@@ -15,19 +15,12 @@ public class PlayerStateStorer : NetworkBehaviour, IDataPersistence {
     [SerializeField] private HotbarStateStorer hotbarStateStorer;
     [SerializeField] private InventoryStateStorer inventoryStateStorer;
     [SerializeField] private BingoBongoStorer bingoBongoStorer;
-    [SerializeField] LayerMask waterMask, landMask, boatMask;
 
     private Vector3 defaultPosition;
-    private PlayersSurface myPlayersSurface;
-    private float probeRadius = 0.08f;
+    public PlayersSurface myPlayersSurface { get; private set; }
     
     private ItemSO currentEquippedItemSO = null;
     private BehaviourItem currentEquippedItemBehaviour;
-
-    private void Start()
-    {
-        myPlayersSurface = DetectPlayerSurface();
-    }
 
     public override void OnNetworkSpawn() {
         base.OnNetworkSpawn();
@@ -72,7 +65,7 @@ public class PlayerStateStorer : NetworkBehaviour, IDataPersistence {
     #region ==== DATA PERSISTENCE ====
 
     public void LoadData(GameData gameData) {
-        Debug.Log("LoadData called for playerStateStorer with clientid: " + OwnerClientId + " and index: " + PlayerIndexManager.Instance.GetPlayerIndexForClientId(OwnerClientId));
+        // Debug.Log("LoadData called for playerStateStorer with clientid: " + OwnerClientId + " and index: " + PlayerIndexManager.Instance.GetPlayerIndexForClientId(OwnerClientId));
         if (!IsServer) return; // Only load data for the server
 
         if (gameData.allPlayerData.TryGetValue(PlayerIndexManager.Instance.GetPlayerIndexForClientId(OwnerClientId).ToString(), out PlayerData playerData)) {
@@ -130,28 +123,9 @@ public class PlayerStateStorer : NetworkBehaviour, IDataPersistence {
     
     #endregion
     
-    /// <summary>
-    ///Returns what surface the player is standing on
-    /// </summary>
-    /// <returns>PlayerSurface enum</returns>
-    private PlayersSurface DetectPlayerSurface()
+   
+    public void SetPlayersSurface(PlayersSurface newPlayersSurface)
     {
-        if (Physics2D.OverlapCircle(this.transform.position, probeRadius, boatMask))
-        {
-            return PlayersSurface.BOAT;
-        } 
-        else if (Physics2D.OverlapCircle(this.transform.position, probeRadius, landMask))
-        {
-            return PlayersSurface.LAND;
-        }
-        else if(Physics2D.OverlapCircle(this.transform.position, probeRadius, waterMask))
-        {
-            return PlayersSurface.WATER;
-        }
-        else
-        {
-            Debug.LogError("DetectPlayerSurface() couldn't detect any of the eligible masks");
-            return PlayersSurface.NONE;
-        }
+        this.myPlayersSurface = newPlayersSurface;
     }
 }

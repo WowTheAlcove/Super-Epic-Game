@@ -9,7 +9,9 @@ public class PlayerController : NetworkBehaviour {
     [SerializeField] private float moveSpeed;
     [SerializeField] private float interactionRange = 4f;
 
-    [SerializeField] private PlayerStateStorer playerStateStorer;
+    [SerializeField] private PlayerStateStorer myPlayerStateStorer;
+    [SerializeField] LayerMask waterMask, landMask, boatMask;
+    private float surfaceDetectProbeRadius = 0.08f;
 
     private bool isMoving;
     public bool IsMoving => isMoving; // Public property to access isMoving state
@@ -25,6 +27,7 @@ public class PlayerController : NetworkBehaviour {
     private int interactableLayerMask = 1 << 8; // Layer 8 is the "Interactable" layer
 
 
+    #region ============ INIITIALIZATION ============
     private void Awake() {
         myRigidBody = GetComponent<Rigidbody2D>();
     }
@@ -38,6 +41,8 @@ public class PlayerController : NetworkBehaviour {
 
         UIController.Instance.OnInputFreezingMenuEnabled += UIController_OnInputFreezingMenuEnabled;
         UIController.Instance.OnInputFreezingMenuDisabled += UIController_OnInputFreezingMenuDisabled;
+
+        myPlayerStateStorer.SetPlayersSurface(DetectPlayerSurface());
     }
 
     public override void OnNetworkSpawn() {
@@ -52,7 +57,7 @@ public class PlayerController : NetworkBehaviour {
         }
         
         //all users subscribe to selected hotbar slot changes to refresh equipped item
-        playerStateStorer.GetHotbarStateStorer().SelectedSlotIndex.OnValueChanged += (oldValue, newValue) => {
+        myPlayerStateStorer.GetHotbarStateStorer().SelectedSlotIndex.OnValueChanged += (oldValue, newValue) => {
             EquipItemInSelectedHotbarSlot();
         };
     }
@@ -65,8 +70,6 @@ public class PlayerController : NetworkBehaviour {
 
         UnsubscribeEquipRefreshToInventoryChanges();
     }
-
-    #region methods for initializing/deinitializing input, subscribing to inventory changes, and loading player data from DPM
 
     //set up the input actions using the input system
     private void SetupInput() {
@@ -101,12 +104,12 @@ public class PlayerController : NetworkBehaviour {
     }
 
     private void SubscribeEquipRefreshToInventoryChanges() {
-        playerStateStorer.GetInventoryStateStorer().CurrentInventory.OnListChanged += CurrentInventory_OnListChanged;
-        playerStateStorer.GetHotbarStateStorer().CurrentInventory.OnListChanged += CurrentHotbar_OnListChanged;
+        myPlayerStateStorer.GetInventoryStateStorer().CurrentInventory.OnListChanged += CurrentInventory_OnListChanged;
+        myPlayerStateStorer.GetHotbarStateStorer().CurrentInventory.OnListChanged += CurrentHotbar_OnListChanged;
     }
     private void UnsubscribeEquipRefreshToInventoryChanges() {
-        playerStateStorer.GetInventoryStateStorer().CurrentInventory.OnListChanged -= CurrentInventory_OnListChanged;
-        playerStateStorer.GetHotbarStateStorer().CurrentInventory.OnListChanged -= CurrentHotbar_OnListChanged;
+        myPlayerStateStorer.GetInventoryStateStorer().CurrentInventory.OnListChanged -= CurrentInventory_OnListChanged;
+        myPlayerStateStorer.GetHotbarStateStorer().CurrentInventory.OnListChanged -= CurrentHotbar_OnListChanged;
     }
     private void CurrentHotbar_OnListChanged(NetworkListEvent<int> changeEvent) {
         EquipItemInSelectedHotbarSlot();
@@ -125,10 +128,16 @@ public class PlayerController : NetworkBehaviour {
             myPlayerInputActions.Player.Disable();
         }
     }
+    //helper method: select first slot of the hotbar and instantiate the item in it
+    private void InitializeHotbar() {
+        if (myPlayerStateStorer.GetHotbarStateStorer() != null) {
+            myPlayerStateStorer.GetHotbarStateStorer().SelectSlot(0);
+        }
+    }
 
     #endregion
 
-    #region Performing Input Actions
+    #region ========== Performing Input Actions ===========
 
     public void DisableInput()
     {
@@ -141,7 +150,7 @@ public class PlayerController : NetworkBehaviour {
     }
 
     private void BingoBongo_performed(InputAction.CallbackContext obj) {
-        playerStateStorer.GetBingoBongoStorer().IncrementBingoBongoCount();
+        myPlayerStateStorer.GetBingoBongoStorer().IncrementBingoBongoCount();
     }
 
     private void Interact_performed(InputAction.CallbackContext obj) {
@@ -172,8 +181,8 @@ public class PlayerController : NetworkBehaviour {
     //if the equipped item is not null and is usable, call its Use() method
     private void UseEquippedItem_performed(InputAction.CallbackContext obj)
     {
-        ItemSO currentEquippedItemSo = playerStateStorer.GetCurrentEquippedItemSO();
-        BehaviourItem currentEquippedItemBehaviour = playerStateStorer.GetCurrentEquippedItemBehaviour();
+        ItemSO currentEquippedItemSo = myPlayerStateStorer.GetCurrentEquippedItemSO();
+        BehaviourItem currentEquippedItemBehaviour = myPlayerStateStorer.GetCurrentEquippedItemBehaviour();
         if (currentEquippedItemSo != null) {
             if (currentEquippedItemBehaviour is IUsableItem) {
                 //if the equipped item is usable
@@ -190,27 +199,21 @@ public class PlayerController : NetworkBehaviour {
 
     //methods setting equippedItem and instantiating it
     private void HotbarSlot1Pressed_performed(InputAction.CallbackContext obj) {
-        playerStateStorer.GetHotbarStateStorer().SelectSlot(0);
+        myPlayerStateStorer.GetHotbarStateStorer().SelectSlot(0);
     }
     private void HotbarSlot2Pressed_performed(InputAction.CallbackContext obj) {
-        playerStateStorer.GetHotbarStateStorer().SelectSlot(1);
+        myPlayerStateStorer.GetHotbarStateStorer().SelectSlot(1);
     }
     private void HotbarSlot3Pressed_performed(InputAction.CallbackContext obj) {
-        playerStateStorer.GetHotbarStateStorer().SelectSlot(2);
+        myPlayerStateStorer.GetHotbarStateStorer().SelectSlot(2);
     }
     private void HotbarSlot4Pressed_performed(InputAction.CallbackContext obj) {
-        playerStateStorer.GetHotbarStateStorer().SelectSlot(3);
+        myPlayerStateStorer.GetHotbarStateStorer().SelectSlot(3);
     }
 
     #endregion
 
-    //helper method: select first slot of the hotbar and instantiate the item in it
-    private void InitializeHotbar() {
-        if (playerStateStorer.GetHotbarStateStorer() != null) {
-            playerStateStorer.GetHotbarStateStorer().SelectSlot(0);
-        }
-    }
-
+    #region ============ ITEM EQUIPPING =============
     //Sets equipped item to a given ItemSO, stores it's BehaviourItem script and tells player visual to instantiate it's prefab
     private void EquipItem(ItemSO itemSOToEquip)
     {
@@ -225,19 +228,21 @@ public class PlayerController : NetworkBehaviour {
         }
 
         // Store in PlayerStateStorer
-        playerStateStorer.SetEquippedItem(itemSOToEquip, behaviourItem);
+        myPlayerStateStorer.SetEquippedItem(itemSOToEquip, behaviourItem);
 
         OnEquippedItem?.Invoke(this, new OnEquippedItemEventArgs() { newEquippedItemSO = itemSOToEquip });
     }
 
     //helper method: refresh the equipped item based on the current hotbar selection
     private void EquipItemInSelectedHotbarSlot() {
-        if (playerStateStorer.GetHotbarStateStorer().CurrentInventory.Count < playerStateStorer.GetHotbarStateStorer().GetNumOfSlots()) {
+        if (myPlayerStateStorer.GetHotbarStateStorer().CurrentInventory.Count < myPlayerStateStorer.GetHotbarStateStorer().GetNumOfSlots()) {
             //if the hotbar is uninitialized or not fully initialized, maybe because player data is still loading
             return;
         }
-        EquipItem(playerStateStorer.GetHotbarStateStorer().GetSelectedIndexItemSO());
+        EquipItem(myPlayerStateStorer.GetHotbarStateStorer().GetSelectedIndexItemSO());
     }
+    
+    #endregion
 
     //on FixedUpdate we read from the input system and move the player accordingly
     private void FixedUpdate() {
@@ -250,22 +255,89 @@ public class PlayerController : NetworkBehaviour {
             }
         }
     }
+    
+    private void OnTriggerEnter2D(Collider2D other)
+    {
+        if (((1 << other.gameObject.layer) & waterMask) != 0)
+        // If the collider is on the water layer
+        {
+            if (myPlayerStateStorer.myPlayersSurface == PlayersSurface.LAND)
+            {
+                TransitionToSurface(PlayersSurface.WATER);
+            }
+        } 
+        else if(((1 << other.gameObject.layer) & landMask) != 0)
+        // If the collider is on the land layer
+        {
+            if (myPlayerStateStorer.myPlayersSurface == PlayersSurface.WATER)
+            {
+                TransitionToSurface(PlayersSurface.LAND);
+            }
+        }
+    }
+    
+    /// <summary>
+    /// Sets player's surface field, and runs appropriate player logic for that surface 
+    /// </summary>
+    /// <param name="newSurface">The new PlayerSurface enum state</param>
+    private void TransitionToSurface(PlayersSurface newSurface)
+    {
+        // Debug.Log($"Surface changed from {myPlayerStateStorer.myPlayersSurface} to {newSurface}");
+        myPlayerStateStorer.SetPlayersSurface(newSurface);
+        
+        if (newSurface == PlayersSurface.WATER)
+        {
+            // Logic for swimming
+        }
+        else
+        {
+            // Logic for land movement
+        }
+    }
+    
+    /// <summary>
+    /// Returns what surface the player is standing on
+    /// Useful for when no previous knowledge on what we were standing on (Like on game start)
+    /// </summary>
+    /// <returns>PlayerSurface enum</returns>
+    private PlayersSurface DetectPlayerSurface()
+    {
+        if (Physics2D.OverlapCircle(this.transform.position, surfaceDetectProbeRadius, boatMask))
+        {
+            return PlayersSurface.BOAT;
+        } 
+        else if (Physics2D.OverlapCircle(this.transform.position, surfaceDetectProbeRadius, landMask))
+        {
+            return PlayersSurface.LAND;
+        }
+        else if(Physics2D.OverlapCircle(this.transform.position, surfaceDetectProbeRadius, waterMask))
+        {
+            return PlayersSurface.WATER;
+        }
+        else
+        {
+            Debug.LogError("DetectPlayerSurface() couldn't detect any of the eligible masks");
+            return PlayersSurface.NONE;
+        }
+    }
 
+    #region ========== PUBLIC GETTERS ===============
     public Vector2 GetInputMoveVector() {
         return myPlayerInputActions.Player.Movement.ReadValue<Vector2>();
     }
 
-
     public InventoryStateStorer GetInventoryISS() {
-        return playerStateStorer.GetInventoryStateStorer();
+        return myPlayerStateStorer.GetInventoryStateStorer();
     }
 
     public HotbarStateStorer GetHotbarISS() {
-        return playerStateStorer.GetHotbarStateStorer();
+        return myPlayerStateStorer.GetHotbarStateStorer();
     }
+    #endregion
 
+    //Method for DPM to load PSS data for late joiners
     public void LoadData(GameData gameData)
     {
-        playerStateStorer.LoadData(gameData);
+        myPlayerStateStorer.LoadData(gameData);
     }
 }
