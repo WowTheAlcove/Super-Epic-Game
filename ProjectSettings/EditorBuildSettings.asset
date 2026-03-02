@@ -8,6 +8,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/SampleScene.unity
     guid: 2cda990e2423bbf4892e6590ba056729
+  - enabled: 1
+    path: Assets/Scenes/3DShip.unity
+    guid: dd3e8c8a821621d448d42086cbfaea2a
   m_configObjects:
     com.unity.addressableassets: {fileID: 11400000, guid: 92e8e29724d1ed249ba1b546dd119cb7, type: 2}
     com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f, type: 2}
