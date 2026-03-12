@@ -1,5 +1,6 @@
 using Unity.Cinemachine;
 using System;
+using Unity.Multiplayer.Samples.Utilities.ClientAuthority;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -10,13 +11,11 @@ public class PlayerController : NetworkBehaviour {
     [SerializeField] private float interactionRange = 4f;
 
     [SerializeField] private PlayerStateStorer myPlayerStateStorer;
-    [SerializeField] LayerMask waterMask, landMask, boatMask;
-    private float surfaceDetectProbeRadius = 0.08f;
 
     private bool isMoving;
     public bool IsMoving => isMoving; // Public property to access isMoving state
 
-    private Rigidbody2D myRigidBody;
+    private Rigidbody myRigidBody;
     private Camera mainCamera;
     private PlayerInputActions myPlayerInputActions;
     public event EventHandler<OnEquippedItemEventArgs> OnEquippedItem;
@@ -29,7 +28,8 @@ public class PlayerController : NetworkBehaviour {
 
     #region ============ INIITIALIZATION ============
     private void Awake() {
-        myRigidBody = GetComponent<Rigidbody2D>();
+        myRigidBody = GetComponent<Rigidbody>();
+        Debug.Log($"Rigidbody found: {myRigidBody != null}, on object: {myRigidBody?.gameObject.name}");
     }
 
     private void Start() {
@@ -41,8 +41,6 @@ public class PlayerController : NetworkBehaviour {
 
         UIController.Instance.OnInputFreezingMenuEnabled += UIController_OnInputFreezingMenuEnabled;
         UIController.Instance.OnInputFreezingMenuDisabled += UIController_OnInputFreezingMenuDisabled;
-
-        myPlayerStateStorer.SetPlayersSurface(DetectPlayerSurface());
     }
 
     public override void OnNetworkSpawn() {
@@ -156,8 +154,8 @@ public class PlayerController : NetworkBehaviour {
     private void Interact_performed(InputAction.CallbackContext obj) {
 
         Ray ray = mainCamera.ScreenPointToRay(Mouse.current.position.ReadValue());
-        RaycastHit2D[] hits2D = Physics2D.GetRayIntersectionAll(ray, 1000f, interactableLayerMask);
-        foreach(RaycastHit2D hit in hits2D) {
+        RaycastHit[] hits = Physics.RaycastAll(ray, 1000f, interactableLayerMask);
+        foreach(RaycastHit hit in hits) {
             if (hit.collider.TryGetComponent<IInteractable>(out IInteractable iInteractable)) { // if the hit object has an IInteractable component
 
                 //calculate if it's in range
@@ -165,7 +163,7 @@ public class PlayerController : NetworkBehaviour {
                 if (hit.collider.TryGetComponent<ICustomInteractRange>(out ICustomInteractRange iCustomInteractRange)) {
                     tempInteractionRange += iCustomInteractRange.AdditionalInteractRange;
                 }
-                if (Vector2.Distance(hit.transform.position, this.transform.position) > (tempInteractionRange)) {
+                if (Vector3.Distance(hit.transform.position, this.transform.position) > (tempInteractionRange)) {
                     //if the interactable object is out of range, do nothing
                     continue;
                 }   
@@ -243,84 +241,28 @@ public class PlayerController : NetworkBehaviour {
     }
     
     #endregion
-
+    
     //on FixedUpdate we read from the input system and move the player accordingly
     private void FixedUpdate() {
-        if (IsOwner) {
-            Vector2 inputMoveVector = myPlayerInputActions.Player.Movement.ReadValue<Vector2>();
-            isMoving = inputMoveVector.magnitude > 0;//set isMoving
-
-            if (isMoving) {
-                myRigidBody.AddForce(inputMoveVector * (moveSpeed * Time.fixedDeltaTime), ForceMode2D.Force);
-            }
-        }
-    }
-    
-    private void OnTriggerEnter2D(Collider2D other)
-    {
-        if (((1 << other.gameObject.layer) & waterMask) != 0)
-        // If the collider is on the water layer
+        if (!IsOwner)
         {
-            if (myPlayerStateStorer.myPlayersSurface == PlayersSurface.LAND)
-            {
-                TransitionToSurface(PlayersSurface.WATER);
-            }
-        } 
-        else if(((1 << other.gameObject.layer) & landMask) != 0)
-        // If the collider is on the land layer
-        {
-            if (myPlayerStateStorer.myPlayersSurface == PlayersSurface.WATER)
-            {
-                TransitionToSurface(PlayersSurface.LAND);
-            }
+            return;
         }
-    }
-    
-    /// <summary>
-    /// Sets player's surface field, and runs appropriate player logic for that surface 
-    /// </summary>
-    /// <param name="newSurface">The new PlayerSurface enum state</param>
-    private void TransitionToSurface(PlayersSurface newSurface)
-    {
-        // Debug.Log($"Surface changed from {myPlayerStateStorer.myPlayersSurface} to {newSurface}");
-        myPlayerStateStorer.SetPlayersSurface(newSurface);
         
-        if (newSurface == PlayersSurface.WATER)
-        {
-            // Logic for swimming
-        }
-        else
-        {
-            // Logic for land movement
-        }
+        Vector2 inputMoveVector = myPlayerInputActions.Player.Movement.ReadValue<Vector2>();
+        Vector3 worldMoveVector = new Vector3(inputMoveVector.x, 0, inputMoveVector.y);
+        isMoving = worldMoveVector.magnitude > 0;
+        
+        Vector3 velocityVector =  new Vector3(
+            worldMoveVector.x * moveSpeed,
+            myRigidBody.linearVelocity.y, // preserve y, so gravity still works
+            worldMoveVector.z * moveSpeed
+        );
+        
+        // Debug.Log($"Adding linearVelocity: {velocityVector}");
+        myRigidBody.linearVelocity = velocityVector;
     }
     
-    /// <summary>
-    /// Returns what surface the player is standing on
-    /// Useful for when no previous knowledge on what we were standing on (Like on game start)
-    /// </summary>
-    /// <returns>PlayerSurface enum</returns>
-    private PlayersSurface DetectPlayerSurface()
-    {
-        if (Physics2D.OverlapCircle(this.transform.position, surfaceDetectProbeRadius, boatMask))
-        {
-            return PlayersSurface.BOAT;
-        } 
-        else if (Physics2D.OverlapCircle(this.transform.position, surfaceDetectProbeRadius, landMask))
-        {
-            return PlayersSurface.LAND;
-        }
-        else if(Physics2D.OverlapCircle(this.transform.position, surfaceDetectProbeRadius, waterMask))
-        {
-            return PlayersSurface.WATER;
-        }
-        else
-        {
-            Debug.LogError("DetectPlayerSurface() couldn't detect any of the eligible masks");
-            return PlayersSurface.NONE;
-        }
-    }
-
     #region ========== PUBLIC GETTERS ===============
     public Vector2 GetInputMoveVector() {
         return myPlayerInputActions.Player.Movement.ReadValue<Vector2>();
