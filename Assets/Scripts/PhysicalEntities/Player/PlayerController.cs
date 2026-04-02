@@ -18,6 +18,8 @@ public class PlayerController : NetworkBehaviour {
     private Rigidbody myRigidBody;
     private Camera mainCamera;
     private PlayerInputActions myPlayerInputActions;
+    public Transform platformAnchor { get; private set; }
+    private Vector3 lastAnchorPosition;
     public event EventHandler<OnEquippedItemEventArgs> OnEquippedItem;
     public class OnEquippedItemEventArgs : EventArgs {
         public ItemSO newEquippedItemSO;
@@ -25,11 +27,23 @@ public class PlayerController : NetworkBehaviour {
 
     private int interactableLayerMask = 1 << 8; // Layer 8 is the "Interactable" layer
 
+    public void AttachToPlatform(Transform anchor)
+    {
+        platformAnchor = anchor;
+        lastAnchorPosition = anchor.position;
+    }
+
+    public void DetachFromPlatform()
+    {
+        platformAnchor = null;
+    }
+
+    
 
     #region ============ INIITIALIZATION ============
     private void Awake() {
         myRigidBody = GetComponent<Rigidbody>();
-        Debug.Log($"Rigidbody found: {myRigidBody != null}, on object: {myRigidBody?.gameObject.name}");
+        // Debug.Log($"Rigidbody found: {myRigidBody != null}, on object: {myRigidBody?.gameObject.name}");
     }
 
     private void Start() {
@@ -253,11 +267,24 @@ public class PlayerController : NetworkBehaviour {
         Vector3 worldMoveVector = new Vector3(inputMoveVector.x, 0, inputMoveVector.y);
         isMoving = worldMoveVector.magnitude > 0;
         
+        // Apply platform movement delta first
+        if (platformAnchor != null)
+        {
+            Vector3 delta = platformAnchor.position - lastAnchorPosition;
+            myRigidBody.MovePosition(myRigidBody.position + delta);
+            lastAnchorPosition = platformAnchor.position;
+            // Debug.Log("New Position: "  + platformAnchor.position);
+        }
+        
         Vector3 velocityVector =  new Vector3(
             worldMoveVector.x * moveSpeed,
             myRigidBody.linearVelocity.y, // preserve y, so gravity still works
             worldMoveVector.z * moveSpeed
         );
+        
+        //rotation
+        transform.LookAt(transform.position + (new Vector3(inputMoveVector.x, 0,  inputMoveVector.y)));
+        
         
         // Debug.Log($"Adding linearVelocity: {velocityVector}");
         myRigidBody.linearVelocity = velocityVector;

@@ -3,7 +3,142 @@ guid: de901542338cc864d825e2f79746b8d3
 ModelImporter:
   serializedVersion: 24200
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: MI_Base_Wood_Dark
+    second: {fileID: 2100000, guid: 2ebc4e5f2c1339243bc75522cac59f7b, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Barrel_Wood_1
+    second: {fileID: 2100000, guid: 07c507dda7e44b6459264e416b7aa156, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Barrel_Wood_2
+    second: {fileID: 2100000, guid: 0a6476d92c0b71f46976d10da9684dc5, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Black_Powder
+    second: {fileID: 2100000, guid: 9ab027c043c38bb46a80522725c209d6, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Bottle_Transparent
+    second: {fileID: 2100000, guid: 6345d9b300419974abb99c0542ddfe52, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Cannon_01
+    second: {fileID: 2100000, guid: 2e69f6df8dbcd164896720c3d61ab34a, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Cannon_02
+    second: {fileID: 2100000, guid: e4393eb5d12563641b7b710b2e78d2e5, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Cannon_Balls
+    second: {fileID: 2100000, guid: 13372ff758614274b9f2cec638019481, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Cannon_Wood_01
+    second: {fileID: 2100000, guid: d7c72ee0da4432f46965e6c73846e3b7, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Cannon_Wood_02
+    second: {fileID: 2100000, guid: 67e0df0f05e97df4ca2d3d60e0300992, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Cups
+    second: {fileID: 2100000, guid: 00336a57ea4439f4eaae6f74e49b44c0, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Flag_02
+    second: {fileID: 2100000, guid: fcdb910471b65fc4b87f8463b4b51445, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Gold_Dark
+    second: {fileID: 2100000, guid: 680fc3cf638102642bd2eb54a250a417, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Gold_Light
+    second: {fileID: 2100000, guid: 0adb7666ac61fbd4b946cb98a206a332, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Metal_Dark
+    second: {fileID: 2100000, guid: 9bb1f044b08fe1c4284020e4d1061d53, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Metal_Light
+    second: {fileID: 2100000, guid: 4896846f9a0a2ed4aa12846eca2ef746, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Rope
+    second: {fileID: 2100000, guid: b49a2a7f887ef4f4a87dc40c5da2c4a1, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Rum
+    second: {fileID: 2100000, guid: 60b55eeb4207e0740a507d9c95f7e71e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Sail_01
+    second: {fileID: 2100000, guid: f8c64e1afe7b56a4eaf7c30a7f147fd5, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Sail_02
+    second: {fileID: 2100000, guid: a5449562abc8811448d242b73d3981eb, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Shadows
+    second: {fileID: 2100000, guid: bf3cdbfb43247de48bd56074236bf5d7, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Window
+    second: {fileID: 2100000, guid: 7e42b9a024c062d4ba874b37bd0c29fd, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Wood_Dark
+    second: {fileID: 2100000, guid: da100e186ede90d46b529a2aa142b600, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Wood_Light
+    second: {fileID: 2100000, guid: 938ab5a0ed51d224781150e7635f285e, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: M_Wood_Maroon
+    second: {fileID: 2100000, guid: 3f7f05a986d41384c8b4ea9b52ff9098, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: lambert1
+    second: {fileID: 2100000, guid: bf73f7ea3c447fb44ad3e5945c292421, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: lambert23
+    second: {fileID: 2100000, guid: 93f05df9854733646b278f4579e70ab2, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0
@@ -71,8 +206,8 @@ ModelImporter:
     useFileScale: 1
     strictVertexDataChecks: 0
   tangentSpace:
-    normalSmoothAngle: 60
-    normalImportMode: 0
+    normalSmoothAngle: 85
+    normalImportMode: 1
     tangentImportMode: 3
     normalCalculationMode: 4
     legacyComputeAllNormalsFromSmoothingGroupsWhenMeshHasBlendShapes: 0
