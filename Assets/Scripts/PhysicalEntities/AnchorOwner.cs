@@ -1,32 +1,58 @@
+using System.Collections;
 using UnityEngine;
 
 public class AnchorOwner : MonoBehaviour
 {
+    private bool playerOnBoard = false;
+    private PlayerController boardedPlayer = null;
+
     private void OnCollisionEnter(Collision collision)
     {
-        Debug.Log("OnCollisionENter on Anchor Owner");
         if (!collision.gameObject.GetComponent<PlayerController>()) return;
 
         PlayerController pc = collision.gameObject.GetComponent<PlayerController>();
-        if (pc == null || pc.platformAnchor != null) return;
+        if (pc == null) return;
 
-        // Create anchor as child of boat at player's current position
-        GameObject anchor = new GameObject("PlayerAnchor");
-        anchor.transform.SetParent(this.transform);
-        anchor.transform.position = collision.transform.position;
+        boardedPlayer = pc;
+        playerOnBoard = true;
 
-        pc.AttachToPlatform(anchor.transform);
+        if (pc.platformAnchor == null)
+        {
+            GameObject anchor = new GameObject("PlayerAnchor");
+            anchor.transform.SetParent(this.transform);
+            anchor.transform.position = collision.transform.position;
+            pc.AttachToPlatform(anchor.transform);
+        }
+    }
+
+    private void OnCollisionStay(Collision collision)
+    {
+        if (!collision.gameObject.GetComponent<PlayerController>()) return;
+        playerOnBoard = true; // keep refreshing as long as contact exists
     }
 
     private void OnCollisionExit(Collision collision)
     {
-        Debug.Log("OnCollisionExit on Anchor Owner");
         if (!collision.gameObject.GetComponent<PlayerController>()) return;
+        playerOnBoard = false;
+        StartCoroutine(CheckDetach());
+    }
 
-        PlayerController pc = collision.gameObject.GetComponent<PlayerController>();
-        if (pc == null || pc.platformAnchor == null) return;
+    private IEnumerator CheckDetach()
+    {
+        // Wait a few physics frames — if OnCollisionStay refreshes playerOnBoard,
+        // the player never truly left and we cancel the detach
+        yield return new WaitForFixedUpdate();
+        yield return new WaitForFixedUpdate();
+        yield return new WaitForFixedUpdate();
 
-        Destroy(pc.platformAnchor.gameObject);
-        pc.DetachFromPlatform();
+        if (!playerOnBoard && boardedPlayer != null)
+        {
+            if (boardedPlayer.platformAnchor != null)
+                Destroy(boardedPlayer.platformAnchor.gameObject);
+
+            boardedPlayer.DetachFromPlatform();
+            boardedPlayer = null;
+        }
     }
 }

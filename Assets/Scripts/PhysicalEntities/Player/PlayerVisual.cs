@@ -72,6 +72,7 @@ public class PlayerVisual : NetworkBehaviour
             heldItemOffset = ((IVisibleHeldItem)currentInstantiatedItemGO.GetComponent<BehaviourItem>()).HeldOffset;
         } else {
             shouldDisplayCurrentObjectGO = false;
+            //if u read this ur gay
         }
     }
 

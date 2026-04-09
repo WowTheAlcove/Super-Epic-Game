@@ -20,25 +20,14 @@ public class PlayerController : NetworkBehaviour {
     private PlayerInputActions myPlayerInputActions;
     public Transform platformAnchor { get; private set; }
     private Vector3 lastAnchorPosition;
+    private Quaternion lastAnchorRotation;
+
     public event EventHandler<OnEquippedItemEventArgs> OnEquippedItem;
     public class OnEquippedItemEventArgs : EventArgs {
         public ItemSO newEquippedItemSO;
     }
 
     private int interactableLayerMask = 1 << 8; // Layer 8 is the "Interactable" layer
-
-    public void AttachToPlatform(Transform anchor)
-    {
-        platformAnchor = anchor;
-        lastAnchorPosition = anchor.position;
-    }
-
-    public void DetachFromPlatform()
-    {
-        platformAnchor = null;
-    }
-
-    
 
     #region ============ INIITIALIZATION ============
     private void Awake() {
@@ -49,9 +38,12 @@ public class PlayerController : NetworkBehaviour {
     private void Start() {
         mainCamera = Camera.main; //for raycasting
 
-        //set the cinemachine camera to follow this player
-        CinemachineCamera cmCamera = FindFirstObjectByType<CinemachineCamera>();
-        cmCamera.Follow = this.transform;
+        if (IsLocalPlayer)
+        {
+            //set the cinemachine camera to follow this player
+            CinemachineCamera cmCamera = FindFirstObjectByType<CinemachineCamera>();
+            cmCamera.Follow = this.transform;
+        }
 
         UIController.Instance.OnInputFreezingMenuEnabled += UIController_OnInputFreezingMenuEnabled;
         UIController.Instance.OnInputFreezingMenuDisabled += UIController_OnInputFreezingMenuDisabled;
@@ -272,7 +264,11 @@ public class PlayerController : NetworkBehaviour {
         {
             Vector3 delta = platformAnchor.position - lastAnchorPosition;
             myRigidBody.MovePosition(myRigidBody.position + delta);
-            lastAnchorPosition = platformAnchor.position;
+            
+            //weird rotation stuff
+            Quaternion rotationDelta = platformAnchor.rotation * Quaternion.Inverse(lastAnchorRotation);
+            myRigidBody.MoveRotation(rotationDelta * myRigidBody.rotation);
+            
             // Debug.Log("New Position: "  + platformAnchor.position);
         }
         
@@ -288,6 +284,13 @@ public class PlayerController : NetworkBehaviour {
         
         // Debug.Log($"Adding linearVelocity: {velocityVector}");
         myRigidBody.linearVelocity = velocityVector;
+        
+        if (platformAnchor != null)
+        {
+            platformAnchor.position = myRigidBody.position;
+            lastAnchorPosition = platformAnchor.position;
+            lastAnchorRotation = platformAnchor.rotation;
+        }
     }
     
     #region ========== PUBLIC GETTERS ===============
@@ -308,5 +311,17 @@ public class PlayerController : NetworkBehaviour {
     public void LoadData(GameData gameData)
     {
         myPlayerStateStorer.LoadData(gameData);
+    }
+
+    public void AttachToPlatform(Transform anchor)
+    {
+        platformAnchor = anchor;
+        lastAnchorPosition = anchor.position;
+        lastAnchorRotation = anchor.rotation;
+    }
+
+    public void DetachFromPlatform()
+    {
+        platformAnchor = null;
     }
 }
