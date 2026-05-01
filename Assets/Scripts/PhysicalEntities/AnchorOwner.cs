@@ -16,7 +16,7 @@ public class AnchorOwner : MonoBehaviour
         boardedPlayer = pc;
         playerOnBoard = true;
 
-        if (pc.platformAnchor == null)
+        if (pc.platformAnchor == null && pc.IsLocalPlayer)
         {
             GameObject anchor = new GameObject("PlayerAnchor");
             anchor.transform.SetParent(this.transform);

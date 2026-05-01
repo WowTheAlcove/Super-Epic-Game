@@ -155,6 +155,7 @@ public class PlayerController : NetworkBehaviour {
 
     private void BingoBongo_performed(InputAction.CallbackContext obj) {
         myPlayerStateStorer.GetBingoBongoStorer().IncrementBingoBongoCount();
+        ObjectVisibilityManager.Instance.PlayerEnteredLowerDeck();
     }
 
     private void Interact_performed(InputAction.CallbackContext obj) {
@@ -265,26 +266,33 @@ public class PlayerController : NetworkBehaviour {
             Vector3 delta = platformAnchor.position - lastAnchorPosition;
             myRigidBody.MovePosition(myRigidBody.position + delta);
             
-            //weird rotation stuff
+            //weird rotation stuff to simulate boat rotation
             Quaternion rotationDelta = platformAnchor.rotation * Quaternion.Inverse(lastAnchorRotation);
             myRigidBody.MoveRotation(rotationDelta * myRigidBody.rotation);
             
             // Debug.Log("New Position: "  + platformAnchor.position);
         }
         
+        //calculating movement to do from input
         Vector3 velocityVector =  new Vector3(
             worldMoveVector.x * moveSpeed,
             myRigidBody.linearVelocity.y, // preserve y, so gravity still works
             worldMoveVector.z * moveSpeed
         );
         
-        //rotation
-        transform.LookAt(transform.position + (new Vector3(inputMoveVector.x, 0,  inputMoveVector.y)));
+        //calculating rotation to do from input
+        Vector3 lookDir = new Vector3(inputMoveVector.x, 0, inputMoveVector.y);
+        if (lookDir.sqrMagnitude > 0.001f)
+        {
+            Quaternion targetRot = Quaternion.LookRotation(lookDir);
+            myRigidBody.MoveRotation(targetRot);
+        }
         
         
         // Debug.Log($"Adding linearVelocity: {velocityVector}");
         myRigidBody.linearVelocity = velocityVector;
         
+        //Update the platform anchor's position
         if (platformAnchor != null)
         {
             platformAnchor.position = myRigidBody.position;

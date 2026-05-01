@@ -315,14 +315,14 @@ MonoBehaviour:
   snapPositionThreshold: 0
   snapRotationThreshold: 0
   snapScaleThreshold: 0
-  positionLerpSpeed: 0.85
+  positionLerpSpeed: 1
   rotationLerpSpeed: 0.85
   scaleLerpSpeed: 0.85
   timeCorrectionSpeed: 0.1
   snapTimeThreshold: 3
   syncPosition: 0
   syncRotation: 0
-  syncScale: 0
+  syncScale: 7
   syncVelocity: 0
   syncAngularVelocity: 0
   isPositionCompressed: 0
@@ -331,7 +331,7 @@ MonoBehaviour:
   isVelocityCompressed: 0
   isAngularVelocityCompressed: 0
   automaticallyResetTime: 1
-  isSmoothingAuthorityChanges: 0
+  isSmoothingAuthorityChanges: 1
   transformSource: 0
   whenToUpdateTransform: 0
   sendRate: 30
@@ -467,6 +467,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: df4e0abf43e34f94c8660a651e867937, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2161052488034012356}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: df4e0abf43e34f94c8660a651e867937, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4153082057475905516}
   m_SourcePrefab: {fileID: 100100000, guid: df4e0abf43e34f94c8660a651e867937, type: 3}
 --- !u!1 &37139128317080422 stripped
 GameObject:
@@ -512,6 +515,27 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   heldItemLocationAxle: {fileID: 4929498427199236569}
   myPlayerController: {fileID: 4737102603468640786}
+--- !u!114 &4153082057475905516
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 37139128317080422}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 15f2cae7a75dc1d479c03956c57c10a9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: ProPixelizer::ProPixelizer.ObjectRenderSnapable
+  SnapPosition: 1
+  SnapEulerAngles: 1
+  SnapAngleStrategy: 0
+  angleResolution: 30
+  AlignPixelGrid: 0
+  PixelGridReference: {fileID: 0}
+  AlignmentPixelSize: 5
+  GetPixelSizeFromMaterial: 1
+  ConfigureChildren: 1
 --- !u!4 &848965345080977884 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: df4e0abf43e34f94c8660a651e867937, type: 3}

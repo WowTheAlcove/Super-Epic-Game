@@ -26,7 +26,7 @@ MonoBehaviour:
   EditorPixelExpansion: 1
   GenerateWarnings: 1
   PixelizationMapShaders:
-    PixelizationMap: {fileID: 0}
+    PixelizationMap: {fileID: 4800000, guid: 8dd346b62451e76418dabc2355815f15, type: 3}
   PixelizationShaders:
     CopyDepth: {fileID: 4800000, guid: 5854eec6cff8aa8449c5f14562cf9c11, type: 3}
     CopyMainTexAndDepth: {fileID: 4800000, guid: 4fdd965c0d64e16468688f87fbca597d, type: 3}
@@ -34,16 +34,16 @@ MonoBehaviour:
   OutlineShaders:
     OutlineDetection: {fileID: 4800000, guid: c59878161c7e0ad40b0661b47620d0e5, type: 3}
   DepthRecompositionShaders:
-    SceneRecomposition: {fileID: 0}
+    SceneRecomposition: {fileID: 4800000, guid: 1daf70343df19d34f9bdaf78a137fdd5, type: 3}
   FinalRecompositionPassShaders:
     CopyDepth: {fileID: 4800000, guid: 5854eec6cff8aa8449c5f14562cf9c11, type: 3}
     CopyMainTexAndDepth: {fileID: 4800000, guid: 4fdd965c0d64e16468688f87fbca597d, type: 3}
   FullscreenColorGradingPassShaders:
     FullScreenColorGrade: {fileID: 4800000, guid: d5205d08ab9a61a4fa1cdf7f0ab15dc2, type: 3}
   RenderGraphUnredirectPassShaders:
-    CopyDepth: {fileID: 0}
+    CopyDepth: {fileID: 4800000, guid: 5854eec6cff8aa8449c5f14562cf9c11, type: 3}
   CopySubcameraDepthPassShaders:
-    CopyDepth: {fileID: 0}
+    CopyDepth: {fileID: 4800000, guid: 5854eec6cff8aa8449c5f14562cf9c11, type: 3}
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
